@@ -89,6 +89,7 @@ class Direction(Enum):
 @unique
 class Offset(Enum):
     """开平仓状态"""
+    NONE = ""
     OPEN = "open"
     CLOSE = "close"
     CLOSETODAY = "close_today"  # 平今
@@ -146,3 +147,14 @@ class Product(Enum):
     FUTURES = "futures"     # 期货
     INDEX = "index"         # 指数
 
+
+@unique
+class StockType(Enum):
+    """"""
+    pass
+
+@unique
+class MongoDbName(Enum):
+    """mongodb中的数据库名"""
+    DAILY_DB_NAME = 'market_data_daily'
+    MINUTE_DB_NAME = 'Min_Db'

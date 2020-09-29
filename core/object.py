@@ -15,36 +15,37 @@ ACTIVE_STATUSES = {Status.SUBMITTING, Status.NOT_TRADED, Status.PART_TRADED}
 @dataclass
 class BaseData:
     """基类"""
-    gateway_name: str
+    gateway_name: str = EmptyType.EMPTY_STRING.value
 
 
 @dataclass
 class BarData(BaseData):
     """K线数据类"""
-    symbol: str
-    exchange: Exchange
-    datetime: datetime
+    symbol: str = EmptyType.EMPTY_STRING.value
+    exchange: Exchange = EmptyType.EMPTY_STRING.value
+    datetime: datetime = None
 
     interval: Interval = None
+    open: float = EmptyType.EMPTY_FLOAT.value
+    high: float = EmptyType.EMPTY_FLOAT.value
+    low: float = EmptyType.EMPTY_FLOAT.value
+    close: float = EmptyType.EMPTY_FLOAT.value
     volume: float = EmptyType.EMPTY_FLOAT.value
     open_interest: float = EmptyType.EMPTY_FLOAT.value
-    open_price: float = EmptyType.EMPTY_FLOAT.value
-    high_price: float = EmptyType.EMPTY_FLOAT.value
-    low_price: float = EmptyType.EMPTY_FLOAT.value
-    close_price: float = EmptyType.EMPTY_FLOAT.value
+    amount: float = EmptyType.EMPTY_FLOAT.value
 
     def __post_init__(self):
         """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange.value}"
+        self.symbol_full = f"{self.symbol}.{self.exchange}"
 
 
 @dataclass
 class OrderData(BaseData):
     """委托订单类"""
     # 代码信息
-    symbol: str
-    exchange: Exchange
-    orderid: str
+    symbol: str = EmptyType.EMPTY_STRING.value
+    exchange: Exchange = Exchange.SSE.value
+    orderid: str = EmptyType.EMPTY_STRING.value
 
     # 报单信息
     type: OrderType = OrderType.LIMIT.value             # 报单类型
@@ -63,7 +64,7 @@ class OrderData(BaseData):
 
     def __post_init__(self):
         """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange.value}"
+        self.symbol_full = f"{self.symbol}.{self.exchange}"
         self.orderid_full = f"{self.gateway_name}.{self.orderid}"
 
     def is_active(self) -> bool:
@@ -78,72 +79,74 @@ class OrderData(BaseData):
 class TradeData(BaseData):
     """交易/成交数据用于保存委托订单的成交情况，一笔委托可能有多笔成交数据"""
     # 代码编号信息
-    symbol: str
-    exchange: Exchange
-    orderid: str
-    tradeid: str
-    direction: Direction = None
+    symbol: str = EmptyType.EMPTY_STRING.value                             # 合约代码
+    exchange: Exchange = Exchange.SSE.value                      # 交易所代码
+    orderid: str = EmptyType.EMPTY_STRING.value                            # 订单编号
+    tradeid: str = EmptyType.EMPTY_STRING.value                            # 成交单编号
 
     # 成交相关
-    offset: Offset = Offset.NONE
-    price: float = EmptyType.EMPTY_FLOAT
-    volume: float = EmptyType.EMPTY_FLOAT
-    datetime: datetime = None
+    direction: Direction = None                 # 交易方向
+    offset: Offset = Offset.NONE.value                # 成交开平
+    price: float = EmptyType.EMPTY_FLOAT.value        # 成交价格
+    volume: float = EmptyType.EMPTY_FLOAT.value       # 成交数量
+    datetime: datetime = None                   # 成交时间
+    multiplier: int = EmptyType.EMPTY_INT.value       # 合约乘数
+    price_tick: float = EmptyType.EMPTY_FLOAT.value   # 最小价格跳动
+    margin: float = EmptyType.EMPTY_FLOAT.value       # 保证金率
+    tax: float = EmptyType.EMPTY_FLOAT.value          # 印花税率
+    slippage: float = EmptyType.EMPTY_FLOAT.value     # 滑点值
+    commission: float = EmptyType.EMPTY_FLOAT.value   # 手续费率
 
     def __post_init__(self):
         """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-        self.vt_orderid = f"{self.gateway_name}.{self.orderid}"
-        self.vt_tradeid = f"{self.gateway_name}.{self.tradeid}"
+        self.symbol_full = f"{self.symbol}.{self.exchange}"
+        self.orderid_full = f"{self.gateway_name}.{self.orderid}"
+        self.tradeid_full = f"{self.gateway_name}.{self.tradeid}"
 
 
 @dataclass
 class PositionData(BaseData):
-    """
-    Positon data is used for tracking each individual position holding.
-    """
+    """持仓数据，跟踪每一个持仓头寸"""
+    # 编号代码信息
+    symbol: str = EmptyType.EMPTY_STRING.value                                 # 合约代码
+    exchange: Exchange = Exchange.SSE.value                          # 交易所代码
+    account_id: str = EmptyType.EMPTY_STRING.value                             # 资金账号代码
 
-    symbol: str
-    exchange: Exchange
-    direction: Direction
-
-    volume: float = EmptyType.EMPTY_FLOAT
-    frozen: float = EmptyType.EMPTY_FLOAT
-    price: float = EmptyType.EMPTY_FLOAT
-    pnl: float = EmptyType.EMPTY_FLOAT
-    yd_volume: float = EmptyType.EMPTY_FLOAT
+    # 持仓信息
+    direction: Direction = Direction.NONE.value                        # 持仓方向
+    volume: float = EmptyType.EMPTY_FLOAT.value       # 持仓数量
+    frozen: float = EmptyType.EMPTY_FLOAT.value       # 冻结数量
+    price: float = EmptyType.EMPTY_FLOAT.value        # 持仓价格
+    pnl: float = EmptyType.EMPTY_FLOAT.value          # 持仓盈亏
+    yd_volume: float = EmptyType.EMPTY_FLOAT.value    # 昨持数量（期货）
+    multiplier: int = EmptyType.EMPTY_INT.value       # 合约乘数
+    price_tick: float = EmptyType.EMPTY_FLOAT.value   # 最小价格跳动
+    margin: float = EmptyType.EMPTY_FLOAT.value       # 保证金率
 
     def __post_init__(self):
         """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-        self.vt_positionid = f"{self.vt_symbol}.{self.direction.value}"
+        self.symbol_full = f"{self.symbol}.{self.exchange}"
+        self.positionid_full = f"{self.symbol_full}.{self.direction}"
 
 
 @dataclass
 class AccountData(BaseData):
-    """
-    Account data contains information about balance, frozen and
-    available.
-    """
-
-    accountid: str
-
-    balance: float = 0
-    frozen: float = 0
+    """账户信息，包含总资产、冻结资产、可用资金（现金）"""
+    accountid: str = EmptyType.EMPTY_STRING.value                                  # 资金账号代码
+    pre_balance: float = EmptyType.EMPTY_FLOAT.value      # 昨日账户总资产
+    total_balance: float = EmptyType.EMPTY_FLOAT.value    # 今日账户总资产
+    frozen: float = EmptyType.EMPTY_FLOAT.value           # 冻结资产
 
     def __post_init__(self):
         """"""
-        self.available = self.balance - self.frozen
-        self.vt_accountid = f"{self.gateway_name}.{self.accountid}"
+        self.available = self.total_balance - self.frozen       # 可用资金
+        self.accountid_full = f"{self.gateway_name}.{self.accountid}"
 
 
 @dataclass
 class LogData(BaseData):
-    """
-    Log data is used for recording log messages on GUI or in log files.
-    """
-
-    msg: str
+    """日志数据"""
+    msg: str = EmptyType.EMPTY_STRING.value
     level: int = INFO
 
     def __post_init__(self):
@@ -153,113 +156,17 @@ class LogData(BaseData):
 
 @dataclass
 class ContractData(BaseData):
-    """
-    Contract data contains basic information about each contract traded.
-    """
-
-    symbol: str
-    exchange: Exchange
-    name: str
-    product: Product
-    size: int
-    pricetick: float
+    """合约数据"""
+    symbol: str = EmptyType.EMPTY_STRING.value
+    exchange: Exchange = Exchange.SSE.value
+    name: str = EmptyType.EMPTY_STRING.value
+    product: Product = Product.STOCK.value
+    size: int = EmptyType.EMPTY_INT.value
+    pricetick: float = EmptyType.EMPTY_FLOAT.value
 
     min_volume: float = 1           # minimum trading volume of the contract
     stop_supported: bool = False    # whether server supports stop order
-    net_position: bool = False      # whether gateway uses net position volume
-    history_data: bool = False      # whether gateway provides bar history data
-
-    option_strike: float = 0
-    option_underlying: str = ""     # vt_symbol of underlying contract
-    option_expiry: datetime = None
-    option_portfolio: str = ""
-    option_index: str = ""          # for identifying options with same strike price
 
     def __post_init__(self):
         """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-
-
-@dataclass
-class SubscribeRequest:
-    """
-    Request sending to specific gateway for subscribing tick data update.
-    """
-
-    symbol: str
-    exchange: Exchange
-
-    def __post_init__(self):
-        """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-
-
-@dataclass
-class OrderRequest:
-    """
-    Request sending to specific gateway for creating a new order.
-    """
-
-    symbol: str
-    exchange: Exchange
-    direction: Direction
-    type: OrderType
-    volume: float
-    price: float = 0
-    offset: Offset = Offset.NONE
-    reference: str = ""
-
-    def __post_init__(self):
-        """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-
-    def create_order_data(self, orderid: str, gateway_name: str) -> OrderData:
-        """
-        Create order data from request.
-        """
-        order = OrderData(
-            symbol=self.symbol,
-            exchange=self.exchange,
-            orderid=orderid,
-            type=self.type,
-            direction=self.direction,
-            offset=self.offset,
-            price=self.price,
-            volume=self.volume,
-            gateway_name=gateway_name,
-        )
-        return order
-
-
-@dataclass
-class CancelRequest:
-    """
-    Request sending to specific gateway for canceling an existing order.
-    """
-
-    orderid: str
-    symbol: str
-    exchange: Exchange
-
-    def __post_init__(self):
-        """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-
-
-@dataclass
-class HistoryRequest:
-    """
-    Request sending to specific gateway for querying history data.
-    """
-
-    symbol: str
-    exchange: Exchange
-    start: datetime
-    end: datetime = None
-    interval: Interval = None
-
-    def __post_init__(self):
-        """"""
-        self.vt_symbol = f"{self.symbol}.{self.exchange.value}"
-
-
+        self.symbol_full = f"{self.symbol}.{self.exchange}"

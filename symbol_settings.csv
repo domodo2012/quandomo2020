@@ -1,0 +1,4 @@
+symbol,size,price_tick,variable_commission,fixed_commission,slippage
+mktdata/000300,1,0.01,0.0005,0,0.04
+mktdata/000905,1,0.01,0.0005,0,0.04
+
