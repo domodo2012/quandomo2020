@@ -5,8 +5,9 @@ from numpy import array
 
 from core.const import *
 from core.context import Context
+from core.object import OrderData
 from core.utility import timestamp_to_datetime, date_str_to_int, Timer
-from engine.strategy_base import StrategyBase, Trade
+# from engine.strategy_base import StrategyBase, Trade
 from trials.event_drive_trial import StrategyBase
 from data_center.get_data_from_db import GetData
 
@@ -64,22 +65,33 @@ class TrialStrategy(StrategyBase):
                 if current_date_int in close_price.keys():
                     # 如果5日均线突破20日均线，并且没有持仓，则买入这只股票100股，委托价为当前bar的收盘价
                     if ma5[-1] > ma20[-1] and stock not in available_position_dict.keys():
-                        Trade.order_shares(stock_code=stock,
-                                           shares=100,
-                                           order_type=OrderType_LIMIT,
-                                           order_price=close_price[current_date_int],
-                                           account=self.account[list(self.account.keys())[0]])
+                        order_data = OrderData(symbol=stock,
+                                               exchange=,
+                                               orderid=,
+                                               type=OrderType_LIMIT,
+                                               direction=Direction_LONG,
+                                               offset=Offset_OPEN,
+                                               price=close_price.loc[],
+                                               volumne=100.0,
+                        )
+                        self.handle_order(order_data)
+
                         print("买入股票 {0} {1} 股，委托价为 {2}，资金账号为 {3} ...".
                               format(stock, 100, close_price[current_date_int],
                                      self.account[list(self.account.keys())[0]]))
 
                     # 如果20日均线突破5日均线，并且有持仓，则卖出这只股票100股，委托价为当前bar的收盘价
                     elif ma5[-1] < ma20[-1] and stock in available_position_dict.keys():
-                        Trade.order_shares(stock_code=stock,
-                                           shares=-100,
-                                           order_type=OrderType_LIMIT,
-                                           order_price=close_price[current_date_int],
-                                           account=self.account[list(self.account.keys())[0]])
+                        order_data = OrderData(symbol=stock,
+                                               exchange=,
+                                               orderid=,
+                                               type=OrderType_LIMIT,
+                                               direction=Direction_LONG,
+                                               offset=Offset_OPEN,
+                                               price=close_price.loc[],
+                                               volumne=100.0
+                        )
+                        self.handle_order(order_data)
                         print("卖出股票 {0} {1} 股，委托价为 {2}，资金账号为 {3} ...".
                               format(stock, 100, close_price[current_date_int],
                                      self.account[list(self.account.keys())[0]]))
