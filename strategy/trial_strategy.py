@@ -3,10 +3,11 @@
 import talib
 from numpy import array
 
-from core.const import RunMode, RightsAdjustment, OrderType
+from core.const import *
 from core.context import Context
 from core.utility import timestamp_to_datetime, date_str_to_int, Timer
 from engine.strategy_base import StrategyBase, Trade
+from trials.event_drive_trial import StrategyBase
 from data_center.get_data_from_db import GetData
 
 
@@ -14,13 +15,13 @@ from data_center.get_data_from_db import GetData
 class TrialStrategy(StrategyBase):
     def init_strategy(self):       # 父类中有定义，但是没有实现，此处实现
         # 设置运行模式，回测或者交易
-        self.run_mode = RunMode.BACKTESTING.value
+        self.run_mode = RunMode_BACKTESTING
         self.start = date_str_to_int("20050104")     # 设置回测起止时间
         self.end = date_str_to_int("20060222")
         self.interval = "d"       # 设置运行周期
         self.account = {"acc0": 1000000, "acc1": 1000}     # 设置回测资金账号及初始资金量
         self.benchmark = "000300.SH"        # 设置回测基准
-        self.rights_adjustment = RightsAdjustment.NONE.value    # 设置复权方式
+        self.rights_adjustment = RightsAdjustment_NONE    # 设置复权方式
         self.get_data = GetData()
 
         # 设置股票池
@@ -65,7 +66,7 @@ class TrialStrategy(StrategyBase):
                     if ma5[-1] > ma20[-1] and stock not in available_position_dict.keys():
                         Trade.order_shares(stock_code=stock,
                                            shares=100,
-                                           order_type=OrderType.LIMIT.value,
+                                           order_type=OrderType_LIMIT,
                                            order_price=close_price[current_date_int],
                                            account=self.account[list(self.account.keys())[0]])
                         print("买入股票 {0} {1} 股，委托价为 {2}，资金账号为 {3} ...".
@@ -76,7 +77,7 @@ class TrialStrategy(StrategyBase):
                     elif ma5[-1] < ma20[-1] and stock in available_position_dict.keys():
                         Trade.order_shares(stock_code=stock,
                                            shares=-100,
-                                           order_type=OrderType.LIMIT.value,
+                                           order_type=OrderType_LIMIT,
                                            order_price=close_price[current_date_int],
                                            account=self.account[list(self.account.keys())[0]])
                         print("卖出股票 {0} {1} 股，委托价为 {2}，资金账号为 {3} ...".
