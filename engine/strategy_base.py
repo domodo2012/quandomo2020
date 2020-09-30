@@ -12,6 +12,7 @@ from core.utility import datetime_to_timestamp, date_str_to_int, timestamp_to_da
 from core.const import RunMode, Interval, MongoDbName, Exchange, EventType
 from core.object import AccountData, BarData
 from core.context import Context
+from core.event import Event
 from engine.event_engine_base import EventEngineBase
 
 
@@ -28,9 +29,10 @@ class StrategyBase(object):
         self.set_slippage_type = None
 
         self.get_data = None            # 从 mongodb 取数据
-        self.timestamp = 0
-        self.bar_index = 0
-        self.bar_len = 0
+        self.timestamp = None
+        self.datetime = None
+        self.bar_index = None
+        self.bar_len = None
 
         self.data_dict = OrderedDict()
         self.trade_dict = OrderedDict()
@@ -39,12 +41,20 @@ class StrategyBase(object):
         self.strat_event_engine = EventEngineBase(timer_interval=0.2)
 
         # 市场事件的监听/回调函数注册
-        self.strat_event_engine.register(EventType.EVENT_MARKET, self.handle_bar)
-        self.strat_event_engine.register(EventType.EVENT_MARKET, self.handle_bar)
-        self.strat_event_engine.register(EventType.EVENT_MARKET, self.handle_bar)
-        self.strat_event_engine.register(EventType.EVENT_MARKET, self.handle_bar)
+        self.strat_event_engine.register(EventType.EVENT_MARKET.value, self.new_bar)
+        self.strat_event_engine.register(EventType.EVENT_MARKET.value, self.handle_bar)
 
+        # 订单委托事件的监听/回调函数注册
+        self.strat_event_engine.register(EventType.EVENT_ORDER.value, self.handle_order)
 
+        # 事前风控事件的监听/回调函数注册
+        self.strat_event_engine.register(EventType.EVENT_RISK_MANAGEMENT.value, self.handle_risk)
+
+        # 成交事件的监听/回调函数注册
+        self.strat_event_engine.register(EventType.EVENT_TRADE.value, self.handle_trade)
+
+        # 通用事件的监听/回调函数注册（数据记录）
+        self.strat_event_engine.register_general_handler(self.event_record)
 
     def load_data_from_mongo(self):
         """加载策略运行所用数据"""
@@ -59,7 +69,7 @@ class StrategyBase(object):
                 bar = BarData()
 
                 bar.gateway_name = 'mongodb'
-                bar.symbol = symbol
+                bar.symbol = d['code']
                 bar.datetime = d['timetag']
                 bar.open = d['open']
                 bar.high = d['high']
@@ -118,26 +128,58 @@ class StrategyBase(object):
 
         # print(self.benchmark, self.start, self.end, self.interval, self.rights_adjustment, self.run_mode)
 
+        bmi_iter = iter(Context.benchmark_index)
         self.bar_index = 0
-        # while True:
-        while:
+
+        self.strat_event_engine.start()
+        while True:
             try:
-                self.timestamp = Context.benchmark_index[self.bar_index]
-                cur_event = self.strat_event_engine.get()
-            except IndexError:
+                self.timestamp = next(bmi_iter)
+            except Exception:
                 # 回测完成
                 print('策略运行完成')
                 break
             else:
                 # 在历史数据上跑，以实时的形式回测。之所以用时间戳为索引，是统一时间轴格式
-                date = int(timestamp_to_datetime(timestamp=self.timestamp, format="%Y%m%d"))
-                print(date)
+                self.datetime = timestamp_to_datetime(self.timestamp, format="%Y%m%d")
+                self.bar_index += 1
+                cur_event = Event(EventType.EVENT_MARKET.value, self.datetime)
+                self.strat_event_engine.put(cur_event)
+                print("{0} {1}".format(self.datetime, cur_event.type))
                 # run_bar_engine(self)        # 启动 bar_engine 进行事件驱动的回测
 
     def strategy_analysis(self):
         pass
 
     def show_results(self):
+        pass
+
+    def cross_limit_order(self):
+        print("run cross_limit_order() method")
+
+    def cross_stop_order(self):
+        print("run cross_stop_order() method")
+
+    def new_bar(self, bar: BarData):
+        """"""
+        self.cross_limit_order(bar)
+        self.cross_stop_order(bar)
+        self.handle_bar(bar)
+
+    def handle_order(self):
+        print("run handle_order() method")
+        pass
+
+    def handle_risk(self):
+        print("run handle_risk() method")
+        pass
+
+    def handle_trade(self):
+        print("run handle_trade() method")
+        pass
+
+    def event_record(self):
+        print("run update_bar_info() method")
         pass
 
     @abstractmethod

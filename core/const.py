@@ -46,12 +46,13 @@ class EventType(Enum):
     EVENT_ORDER = "event_order"                         # 委托订单事件
     EVENT_RISK_MANAGEMENT = "event_risk_management"     # 事前风控事件
     EVENT_TRADE = "event_trade"                         # 成交/交易事件
-    EVENT_RECORD = "event_record"                       # 数据记录事件
+    EVENT_RECORD = "update_bar_info"                       # 数据记录事件
     EVENT_ONBAR = "event_on_bar"                        # 对bar的响应事件
     EVENT_LOG = "event_log"                             # 日志记录事件
     EVENT_ACCOUNT = "event_account"                     # 账户事件
     EVENT_RIGHTS = "event_rights"                       # 股票的分配送转事件
     EVENT_DELIVERY = "event_delivery"                   # 期货交割事件
+    EVENT_STRATEGY = "event_strategy"                   # 组合管理器对所管策略的调整事件
 
 
 @unique

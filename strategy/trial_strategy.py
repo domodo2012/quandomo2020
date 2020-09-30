@@ -30,7 +30,7 @@ class TrialStrategy(StrategyBase):
         # 回测滑点设置
         self.set_slippage_type = 'FIX'
 
-    def handle_bar(self, event):
+    def handle_bar(self, bar):
         print("\n遇到 EventMarket 类事件，回调函数 MaStrategy.handle_bar 按最新市场数据计算一次")
 
         # 取当前bar的持仓情况

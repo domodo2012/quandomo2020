@@ -6,6 +6,7 @@ from time import sleep
 from collections import defaultdict
 
 from core.const import EventType
+from core.event import Event
 
 
 class EventEngineBase(object):
@@ -89,7 +90,7 @@ class EventEngineBase(object):
 
     def start(self, timer=True):
         """
-        引擎启动
+        启动
         timer：是否要启动计时器
         """
         # 将引擎设为启动
@@ -99,12 +100,12 @@ class EventEngineBase(object):
         self._thread.start()
 
         # 启动计时器，计时器事件间隔默认设定为1秒
-        if timer:
-            self._timer_active = True
-            self._timer.start()
+        # if timer:
+        #     self._timer_active = True
+        #     self._timer.start()
 
     def stop(self):
-        """停止引擎"""
+        """停止"""
 
         # 停止计时器
         if self._timer_active:
@@ -149,17 +150,6 @@ class EventEngineBase(object):
         """注销通用事件处理函数监听"""
         if handler in self._general_handlers:
             self._general_handlers.remove(handler)
-
-
-class Event(object):
-    """事件对象"""
-
-    def __init__(self, event_type=None):
-        """Constructor"""
-        self.event_type = event_type  # 事件类型
-        self.event_data_dict = {}  # 字典用于保存具体的事件数据
-
-
 
 
 if __name__ == "__main__":
