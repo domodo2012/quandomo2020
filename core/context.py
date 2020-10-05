@@ -9,46 +9,63 @@ from .object import OrderData, TradeData, PositionData, AccountData
 
 
 class Context(object):
-    # key键 就是每一根 bar 的时间戳
-    order_data_dict = {}        # timestamp : [order_data,order_data]　　mission_engine risk 之后append
-    trade_data_dict = {}         # timestamp : [deal_data,deal_data]    broker_engine  deal 之后append
-    position_data_dict = {}     # timestamp : [position_data,position_data]  broker_engine deal 之后append
+    def __init__(self):
+        # key键 就是每一根 bar 的时间戳
+        self.account_data_dict = {}    # {timestamp : [account_data]}, 基于close，update_bar_info后append
+        self.order_data_dict = {}     # {timestamp : [order_data,order_data]}, handle_order后append, handle_risk后update
+        self.trade_data_dict = {}         # {timestamp : [deal_data,deal_data]}, handle_trade后append
+        self.position_data_dict = {}     # timestamp : [position_data,position_data]  broker_engine trade后append
+        self.slippage_data_dict = {}
+        self.commission_data_dict = {}
+        self.account_pnl_data_dict = {}
+        self.account_available_data_dict = {}
+        self.account_equity_data_dict = {}
 
-    # timestamp : [account_data] ,account_data 只有一个，是当前bar最后一天的,main_engine market_close 之后append
-    account_data_dict = {}
+        self.bar_order_data_list = []   # 每个bar上有可能不止一个order，因此需要装到list里
+        self.bar_trade_data_list = []
+        self.bar_position_data_list = []
+        self.bar_account_data_list = []
+        self.bar_slippage_data_list = []
+        self.bar_commission_data_list = []
+        self.bar_account_pnl_data_list = []
+        self.bar_account_available_data_list = []
+        self.bar_account_equity_data_list = []
 
-    current_order_data = OrderData()
-    current_deal_data = TradeData()
-    current_position_data = PositionData()
-    current_account_data = AccountData()
+        self.current_order_data = OrderData()
+        self.current_trade_data = TradeData()
+        self.current_position_data = PositionData()
+        self.current_account_data = AccountData()
+        self.current_slippage_data = 0
+        self.current_commission_data = 0
+        self.current_account_pnl_data = 0
+        self.current_account_available_data = 0
+        self.current_account_equity_data = 0
 
-    bar_order_data_list = []
-    bar_deal_data_list = []
-    bar_position_data_list = []
-    bar_account_data_list = []
+        self.active_stop_orders = {}            # 动态未成交止损单
+        self.stop_orders = {}                   # 已成交止损单合集
+        self.active_limit_orders ={}            # 动态未成交限价单
+        self.limit_orders = {}                  # 已成交限价单合集
 
-    daily_data = pd.DataFrame()
-    index_daily_data = pd.DataFrame()
+        # 各类交易的总数
+        self.stop_order_count = 0
+        self.limit_order_count = 0
+        self.trade_count = 0
 
-    benchmark_index = []
+        # 市场数据
+        self.daily_data = pd.DataFrame()
+        self.index_daily_data = pd.DataFrame()
+        self.benchmark_index = []
 
-    # 风控部分
-    black_name_list = []
-    is_pass_risk = True
-    is_send_order = False
+        # 风控
+        self.black_name_list = []
+        self.is_pass_risk = True
+        self.is_send_order = False
 
-    # 滑点值，key键是合约代码
-    slippage_dict = {}
+        # 滑点值参数，key键是合约代码
+        self.slippage_dict = {}
 
-    # 手续费值，key键是合约代码
-    commission_dict = {}
-
-    # 每根bar结束，清空当前 bar 的 order 和　trade 的list
-    @classmethod
-    def refresh_list(cls, event):
-        cls.bar_order_data_list = []
-        cls.bar_deal_data_list = []
-        print('清空当前bar的 order_list 和 deal_list')
+        # 手续费参数，key键是合约代码
+        self.commission_dict = {}
 
     # 回测的交易记录
     backtesting_record_order = pd.DataFrame()
@@ -56,11 +73,25 @@ class Context(object):
     backtesting_record_position = pd.DataFrame()
     backtesting_record_account = pd.DataFrame()
 
+    def init_account(self, accnts):
+        for ai, account in enumerate(accnts):
+            self.current_account_data = AccountData()       # 这里必须新建一个AccountData对象，不然下边添加的是同一个
+            self.current_account_data.account_id = account['name']
+            self.current_account_data.total_balance = accnts[ai]['equity']
+            self.current_account_data.available = accnts[ai]['equity']
+            self.bar_account_data_list.append(self.current_account_data)
+
+    # 每根bar结束，清空当前 bar 的 order 和　trade 的list
+    def refresh_list(self):
+        self.bar_order_data_list = []
+        self.bar_trade_data_list = []
+        print('-- this is Context.refresh_list 清空当前bar的 order_list 和 trade_list')
+
     # 每次下单交易完成，经过回测 broker 之后清空 order 和 trade 的数据，重置是否通过风控
-    @classmethod
-    def refresh_current_data(cls, event):
-        cls.current_order_data = OrderData()
-        cls.current_deal_data = TradeData()
-        cls.current_position_data = PositionData()
-        cls.is_pass_risk = True
-        cls.is_send_order = False
+    def refresh_current_data(self):
+        self.current_order_data = OrderData()
+        self.current_trade_data = TradeData()
+        self.current_position_data = PositionData()
+        self.is_pass_risk = True
+        self.is_send_order = False
+

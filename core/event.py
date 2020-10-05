@@ -6,10 +6,9 @@ from typing import Any
 
 
 class Event(object):
-    """事件定义，属性包括事件类型和具体的事件数据"""
-
-    def __init__(self, event_type: str, data: Any = None):
+    def __init__(self, type_: str, dt=None, data: Any = None):
         """"""
-        self.event_type: str = event_type
-        self.data: Any = data
+        self.type_ = type_
+        self.dt = dt    # datetime
+        self.data = data
 

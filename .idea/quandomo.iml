@@ -10,6 +10,8 @@
       <sourceFolder url="file://$MODULE_DIR$/strategy" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/model" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/util" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/trials" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/data_center/data" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.7" jdkType="Python SDK" />

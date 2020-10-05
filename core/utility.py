@@ -11,12 +11,13 @@ from math import floor, ceil
 from functools import wraps
 from csv import DictReader
 from re import findall
+from random import sample
 
 import numpy as np
 import talib
 
 from .object import BarData
-from .const import Exchange
+from .const import *
 
 log_formatter = logging.Formatter('[%(asctime)s] %(message)s')
 file_handlers: Dict[str, logging.FileHandler] = {}
@@ -64,15 +65,15 @@ def singleton(cls):
     return get_instance
 
 
-def extract_symbol_full(symbol_full: str) -> Tuple[str, Exchange]:
+def extract_symbol_full(symbol_full: str) -> Tuple[str, str]:
     """
     返回值: (symbol, exchange)
     """
     symbol, exchange_str = symbol_full.split(".")
-    return symbol, Exchange(exchange_str)
+    return symbol, exchange_str
 
 
-def generate_symbol_full(symbol: str, exchange: Exchange) -> str:
+def generate_symbol_full(symbol: str, exchange: str) -> str:
     """
     返回值 symbol.exchange(symbol_full)
     """
@@ -122,7 +123,7 @@ def get_digits(value: float) -> int:
 class TimeSeriesContainer(object):
     """时间序列数据容器及技术指标计算"""
 
-    def __init__(self, size: int = 100):
+    def __init__(self, size: int = 10):
         """Constructor"""
         self.count: int = 0
         self.size: int = size
@@ -150,10 +151,10 @@ class TimeSeriesContainer(object):
         self.volume_array[:-1] = self.volume_array[1:]
         self.open_interest_array[:-1] = self.open_interest_array[1:]
 
-        self.open_array[-1] = bar.open_price
-        self.high_array[-1] = bar.high_price
-        self.low_array[-1] = bar.low_price
-        self.close_array[-1] = bar.close_price
+        self.open_array[-1] = bar.open
+        self.high_array[-1] = bar.high
+        self.low_array[-1] = bar.low
+        self.close_array[-1] = bar.close
         self.volume_array[-1] = bar.volume
         self.open_interest_array[-1] = bar.open_interest
 
@@ -188,14 +189,14 @@ class TimeSeriesContainer(object):
     @property
     def volume(self) -> np.ndarray:
         """
-        Get trading volume time series.
+        Get trading order_volume time series.
         """
         return self.volume_array
 
     @property
     def open_interest(self) -> np.ndarray:
         """
-        Get trading volume time series.
+        Get trading order_volume time series.
         """
         return self.open_interest_array
 
@@ -639,13 +640,13 @@ def read_symbol_settings(filename: str):
     return settings
 
 
-def get_contract_params(symbol_full_code: str) -> Dict:
+def get_contract_params(symbol_code: str) -> Dict:
     """输入symbol_full 格式的合约代码，输出对应的合约乘数、最小变动单位等参数 """
 
-    symbol, exchg = symbol_full_code.split('.')
-    if exchg == Exchange.SSE.value:
+    symbol, exchg = symbol_code.split('.')
+    if exchg == 'SH':
         symbol_type = 'STOCK_SH'
-    elif exchg == Exchange.SZSE.value:
+    elif exchg == 'SZ':
         symbol_type = 'STOCK_SZ'
     else:
         symbol_type = ''.join(findall(r'[A-Za-z]', symbol)).upper()
@@ -711,4 +712,21 @@ def get_contract_params(symbol_full_code: str) -> Dict:
         return {}
     else:
         return params_dict[symbol_type]
+
+
+def get_exchange(symbol):
+    sec_code, exchge_code = symbol.split('.')
+    if exchge_code.upper() == 'SH':
+        exchange = Exchange_SSE
+    elif exchge_code.upper() == 'SZ':
+        exchange = Exchange_SZSE
+    else:
+        exchange = exchge_code
+    return exchange
+
+
+def generate_random_id(topic, lens=8):
+    _list = [str(i) for i in range(10)]
+    num = sample(_list, lens)
+    return "{}_{}".format(topic, "".join(num))
 

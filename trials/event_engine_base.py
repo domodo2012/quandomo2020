@@ -5,7 +5,7 @@ from threading import Thread, RLock
 from time import sleep
 from collections import defaultdict
 
-from core.const import EventType
+from core.const import *
 from core.event import Event
 
 
@@ -80,7 +80,7 @@ class EventEngineBase(object):
         """运行在计时器线程中的循环函数"""
         while self._timer_active:
             # 创建计时器事件
-            event = Event(event_type=EventType.EVENT_TIMER.value)
+            event = Event(event_type=EVENT_TIMER)
 
             # 向队列中存入计时器事件
             self.put(event)
@@ -161,10 +161,10 @@ if __name__ == "__main__":
 
 
     ee = EventEngineBase(timer_interval=0.1)
-    ee.register(EventType.EVENT_TIMER.value, simple_test)
+    ee.register(EVENT_TIMER, simple_test)
     # ee.register(EventType.EVENT_MARKET.value, simple_test)
     # ee.register_general_handler(simple_test)
 
-    ee.put(Event(EventType.EVENT_TIMER.value))
+    ee.put(Event(EVENT_TIMER))
     ee.start(timer=True)
 

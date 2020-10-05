@@ -32,7 +32,7 @@ engine = BacktestEngine(start_date,
 engine.add_strategy(ExampleStrategy)	插入策略
 engine.load_data_from_db()  # 调用数据
 engine.init_portfolio_strategy()     # 初始化组合，载入交易策略
-engine.run_backtesting()    # 运行回测
+engine.run_strategy()    # 运行回测
 engine.show_performance()		# 显式绩效结果
 engine.show_chart()        # 将交易标识在K线图上
 

@@ -3,7 +3,7 @@
 import pandas as pd
 
 from data_center.mongodb_conn import MongoConn
-from core.const import DatabaseName, Interval
+from core.const import *
 from core.utility import date_str_to_int
 
 
@@ -11,11 +11,11 @@ class GetData(object):
     def __init__(self):
         self.conn = MongoConn()
 
-    def get_all_market_data(self, stock_code=[], field=[], start="", end="", interval=Interval.DAILY.value):
+    def get_all_market_data(self, stock_code=[], field=[], start="", end="", interval=Interval_DAILY):
         """从mongodb取数据"""
 
-        if interval == Interval.DAILY.value:
-            db_name = DatabaseName.MARKET_DATA_DAILY.value
+        if interval == Interval_DAILY:
+            db_name = MongoDbName_MARKET_DATA_DAILY
             if isinstance(start, str):
                 start = date_str_to_int(start)
                 end = date_str_to_int(end)
@@ -45,11 +45,13 @@ class GetData(object):
         因为停牌或者其他原因取不到数据的，１　２　３　返回的是－１，其他返回的是pandas的空或者NaN，所以可以使用　＞０判断是否取到值
         """
         if start != "":
-            start = date_str_to_int(start)
+            if isinstance(start, str):
+                start = date_str_to_int(start)
         else:
             start = 0
         if end != "":
-            end = date_str_to_int(end)
+            if isinstance(end, str):
+                end = date_str_to_int(end)
         else:
             end = 0
         # （１）代码-1，字段-1，时间-1,  return float
@@ -64,7 +66,7 @@ class GetData(object):
             result_dict = {}
             for stock in stock_code:
                 try:
-                    result_dict[stock] = market_data[field[0]].ix[stock, end]
+                    result_dict[stock] = market_data[field[0]].loc[stock, end]
                 except:
                     result_dict[stock] = -1
             return pd.Series(result_dict)
@@ -73,7 +75,7 @@ class GetData(object):
             result_dict = {}
             for field_one in field:
                 try:
-                    result_dict[field_one] = market_data[field_one].ix[stock_code[0], end]
+                    result_dict[field_one] = market_data[field_one].loc[stock_code[0], end]
                 except:
                     result_dict[field_one] = -1
             return pd.Series(result_dict)
@@ -91,39 +93,39 @@ class GetData(object):
         elif len(stock_code) > 1 and len(field) == 1 and (start != end) and count == -1:
             result_dict = {}
             for stock in stock_code:
-                index = market_data.ix[stock].index
+                index = market_data.loc[stock].index
                 index = index[index <= end]
                 index = index[index >= start]
-                result_dict[stock] = market_data[field[0]].ix[stock][index]
+                result_dict[stock] = market_data[field[0]].loc[stock][index]
             return pd.DataFrame(result_dict)
         # （６）代码-n，字段-n，时间-1,  return dataframe 行-字段，列-代码
         elif len(stock_code) > 1 and len(field) > 1 and (start == end) and count == -1:
             result_dict = {}
             for stock in stock_code:
                 try:
-                    result_dict[stock] = market_data.ix[stock].ix[end]
+                    result_dict[stock] = market_data.loc[stock, end]
                 except:
                     result_dict[stock] = pd.Series()
-            return pd.DataFrame(result_dict).ix[field]
+            return pd.DataFrame(result_dict).loc[field]
         # （７）代码-1，字段-n，时间-n,  return dataframe 行-timestamp，列-字段
         elif len(stock_code) == 1 and len(field) > 1 and (start != end) and count == -1:
-            index = market_data.ix[stock_code[0]].index
+            index = market_data.loc[stock_code[0]].index
             index = index[index <= end]
             index = index[index >= start]
-            return market_data.ix[stock_code[0]][field].ix[index]
+            return market_data.ix[stock_code[0]][field].loc[index]
         # 代码-n，字段-n，时间-n,  return dataframe 行-代码-timestamp(多层索引)，列-字段
         else:
             result_dict = {}
             for stock in stock_code:
-                index = market_data.ix[stock].index
+                index = market_data.loc[stock].index
                 index = index[index <= end]
                 index = index[index >= start]
-                result_dict[stock] = market_data.ix[stock][field].ix[index]
+                result_dict[stock] = market_data.loc[stock][field].loc[index]
             return pd.concat(result_dict, keys=stock_code)
 
-    def get_end_timestamp(self, benchmark, interval=Interval.DAILY.value):
-        if interval == Interval.DAILY.value:
-            db_name = DatabaseName.MARKET_DATA_DAILY.value
+    def get_end_timestamp(self, benchmark, interval=Interval_DAILY):
+        # if interval == Interval_DAILY:
+        db_name = MongoDbName_MARKET_DATA_DAILY
 
         colum = {"_id": 0, "timetag": 1}
         end_timestamp_list = self.conn.select_colum(db_name=db_name,
@@ -141,10 +143,10 @@ if __name__ == "__main__":
     aa = GetData()
     stock_list = ['000300.SH', '000001.SZ', '000002.SZ', '600000.SH', '600001.SH']
     daily_data = aa.get_all_market_data(stock_code=stock_list,
-                                        field=["open", "high", "low", "close", "volume", "amount"],
+                                        field=["open", "high", "low", "close", "order_volume", "amount"],
                                         start="2005-01-04",
                                         end="2008-02-22",
-                                        interval=Interval.DAILY.value)
+                                        interval=Interval_DAILY)
     print(daily_data)
 
     # data_1 = aa.get_market_data(daily_data, stock_code=["000002.SZ"], field=["open"], start="2018-01-02",

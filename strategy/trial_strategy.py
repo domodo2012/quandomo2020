@@ -9,7 +9,7 @@ from core.object import OrderData
 from core.utility import timestamp_to_datetime, date_str_to_int, Timer
 # from engine.strategy_base import StrategyBase, Trade
 from trials.event_drive_trial import StrategyBase
-from data_center.get_data_from_db import GetData
+from data_center.get_data import GetData
 
 
 # 继承strategy基类
@@ -103,6 +103,6 @@ if __name__ == "__main__":
     with time_test:
         trial_strategy = TrialStrategy()
         trial_strategy.init_strategy()
-        trial_strategy.run_backtesting()
+        trial_strategy.run_strategy()
         trial_strategy.strategy_analysis()    # 绩效分析
         trial_strategy.show_results()     # 运行结果展示

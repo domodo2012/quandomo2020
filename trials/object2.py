@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from logging import INFO
 
-from .const import *
+from const import *
 
 ACTIVE_STATUSES = {Status_SUBMITTING, Status_NOT_TRADED, Status_PART_TRADED}
 
@@ -15,7 +15,7 @@ ACTIVE_STATUSES = {Status_SUBMITTING, Status_NOT_TRADED, Status_PART_TRADED}
 @dataclass
 class BaseData:
     """基类"""
-    gateway: str = EMPTY_STRING
+    gateway_name: str = EMPTY_STRING
 
 
 @dataclass
@@ -33,100 +33,39 @@ class BarData(BaseData):
     volume: float = EMPTY_FLOAT
     open_interest: float = EMPTY_FLOAT
     amount: float = EMPTY_FLOAT
-    bar_index: int = EMPTY_INT
 
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
 
 
+@dataclass
 class OrderData(BaseData):
     """委托订单类"""
-    def __init__(self,
-                 symbol=None,
-                 exchange=None,
-                 order_id=None,
-                 order_type=OrderType_LIMIT,
-                 direction=None,
-                 offset=None,
-                 price=None,
-                 order_volume=None,
-                 traded_volume=None,
-                 status=None,
-                 account=None,
-                 gateway=None,
-                 order_datetime=None,
-                 comments=None
-                 ):
-        # 代码信息
-        self.symbol = symbol
-        self.exchange = exchange
-        self.order_id = order_id
+    # 代码信息
+    symbol: str = EMPTY_STRING
+    exchange: str = Exchange_SSE
+    orderid: str = EMPTY_STRING
 
-        # 报单信息
-        self.order_type = order_type            # 报单类型
-        self.direction = direction                         # 报单方向
-        self.offset = offset                  # 报单开平仓
-        self.price = price          # 报单价格
-        self.order_volume = order_volume         # 报单数量
-        self.account = account
-        self.traded_volume = traded_volume         # 报单成交数量
-        self.status = status           # 报单状态
-        self.order_datetime = order_datetime                     # 报单时间
-        self.cancel_datetime = None                    # 撤单时间
-        self.comments = comments
-        self.gateway = gateway
+    # 报单信息
+    type: str = OrderType_LIMIT            # 报单类型
+    direction: str = None                         # 报单方向（期货）
+    offset: str = Offset_NONE                  # 报单开平仓
+    price: float = EMPTY_FLOAT          # 报单价格
+    volume: float = EMPTY_FLOAT         # 报单数量
+    traded: float = EMPTY_FLOAT         # 报单成交数量
+    status: str = Status_SUBMITTING           # 报单状态
+    order_datetime: datetime = None                     # 报单时间
+    cancel_datetime: datetime = None                    # 撤单时间
 
-        # 实际交易时信息
-        self.front_id = EMPTY_STRING        # 前置机编号，实际交易用
-        self.session_id = EMPTY_STRING      # 连接编号，实际交易用
+    # 实际交易时信息
+    front_id: str = EMPTY_STRING        # 前置机编号，实际交易用
+    session_id: str = EMPTY_STRING      # 连接编号，实际交易用
 
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
-
-    def is_active(self) -> bool:
-        """委托订单还未成交吗？"""
-        if self.status in ACTIVE_STATUSES:
-            return True
-        else:
-            return False
-
-
-class StopOrder(OrderData):
-    def __init__(self, symbol=None, exchange=None, order_id=None, order_type=None, direction=None, offset=None,
-                 price=None, order_volume=None, account=None, gateway=None, order_datetime=None, comments=None):
-        # 代码信息
-        super().__init__(symbol, exchange, order_id, order_type, direction, offset, price, order_volume, account,
-                         order_datetime)
-        self.symbol = symbol
-        self.exchange = exchange
-        self.order_id = order_id
-
-        # 报单信息
-        self.order_type = OrderType_STOP  # 报单类型
-        self.direction = direction  # 报单方向
-        self.offset = offset  # 报单开平仓
-        self.price = price  # 报单价格
-        self.volume = order_volume  # 报单数量
-        self.account = account
-        self.traded = EMPTY_INT  # 报单成交数量
-        self.status = StopOrderStatus_WAITING  # 报单状态
-        self.order_datetime = order_datetime  # 报单时间
-        self.filled_datetime = None
-        self.cancel_datetime = None  # 撤单时间
-        self.comments = comments
-        self.gateway = gateway
-
-        # 实际交易时信息
-        self.front_id = EMPTY_STRING  # 前置机编号，实际交易用
-        self.session_id = EMPTY_STRING  # 连接编号，实际交易用
-
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
+        self.orderid_full = f"{self.gateway_name}.{self.orderid}"
 
     def is_active(self) -> bool:
         """委托订单还未成交吗？"""
@@ -142,8 +81,8 @@ class TradeData(BaseData):
     # 代码编号信息
     symbol: str = EMPTY_STRING                             # 合约代码
     exchange: str = Exchange_SSE                     # 交易所代码
-    order_id: str = EMPTY_STRING                            # 订单编号
-    trade_id: str = EMPTY_STRING                            # 成交单编号
+    orderid: str = EMPTY_STRING                            # 订单编号
+    tradeid: str = EMPTY_STRING                            # 成交单编号
 
     # 成交相关
     direction: str = None                 # 交易方向
@@ -157,13 +96,12 @@ class TradeData(BaseData):
     tax: float = EMPTY_FLOAT          # 印花税率
     slippage: float = EMPTY_FLOAT     # 滑点值
     commission: float = EMPTY_FLOAT   # 手续费率
-    comments: str = EMPTY_STRING
 
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
-        self.tradeid_full = f"{self.gateway}.{self.trade_id}"
+        self.orderid_full = f"{self.gateway_name}.{self.orderid}"
+        self.tradeid_full = f"{self.gateway_name}.{self.tradeid}"
 
 
 @dataclass
@@ -178,8 +116,8 @@ class PositionData(BaseData):
     direction: str = Direction_NONE                       # 持仓方向
     volume: float = EMPTY_FLOAT       # 持仓数量
     frozen: float = EMPTY_FLOAT       # 冻结数量
-    average_price: float = EMPTY_FLOAT        # 持仓价格
-    position_pnl: float = EMPTY_FLOAT          # 持仓盈亏
+    price: float = EMPTY_FLOAT        # 持仓价格
+    pnl: float = EMPTY_FLOAT          # 持仓盈亏
     yd_volume: float = EMPTY_FLOAT    # 昨持数量（期货）
     multiplier: int = EMPTY_INT      # 合约乘数
     price_tick: float = EMPTY_FLOAT   # 最小价格跳动
@@ -194,7 +132,7 @@ class PositionData(BaseData):
 @dataclass
 class AccountData(BaseData):
     """账户信息，包含总资产、冻结资产、可用资金（现金）"""
-    account_id: str = EMPTY_STRING                                  # 资金账号代码
+    accountid: str = EMPTY_STRING                                  # 资金账号代码
     pre_balance: float = EMPTY_FLOAT      # 昨日账户总资产
     total_balance: float = EMPTY_FLOAT    # 今日账户总资产
     frozen: float = EMPTY_FLOAT           # 冻结资产
@@ -202,7 +140,7 @@ class AccountData(BaseData):
     def __post_init__(self):
         """"""
         self.available = self.total_balance - self.frozen       # 可用资金
-        self.account_id_full = f"{self.gateway}.{self.account_id}"
+        self.accountid_full = f"{self.gateway_name}.{self.accountid}"
 
 
 @dataclass
