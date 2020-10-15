@@ -129,7 +129,7 @@ def new_bar(event):
 
 
 def handle_order(event):
-    print('handle_order() method {0}'.format(event.data))
+    print('handle_order_() method {0}'.format(event.data))
     print('### event data saved')
 
     handle_risk(event)

@@ -51,7 +51,7 @@ class OrderData(BaseData):
                  offset=None,
                  price=None,
                  order_volume=None,
-                 traded_volume=None,
+                 filled_volume=None,
                  status=None,
                  account=None,
                  gateway=None,
@@ -69,13 +69,14 @@ class OrderData(BaseData):
         self.offset = offset                  # 报单开平仓
         self.price = price          # 报单价格
         self.order_volume = order_volume         # 报单数量
-        self.account = account
-        self.traded_volume = traded_volume         # 报单成交数量
+        self.filled_volume = filled_volume         # 报单成交数量
         self.status = status           # 报单状态
         self.order_datetime = order_datetime                     # 报单时间
         self.cancel_datetime = None                    # 撤单时间
+        self.filled_datetime = None
         self.comments = comments
         self.gateway = gateway
+        self.account = account
 
         # 实际交易时信息
         self.front_id = EMPTY_STRING        # 前置机编号，实际交易用
@@ -84,7 +85,7 @@ class OrderData(BaseData):
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
+        self.order_id_full = f"{self.gateway}.{self.order_id}"
 
     def is_active(self) -> bool:
         """委托订单还未成交吗？"""
@@ -95,29 +96,19 @@ class OrderData(BaseData):
 
 
 class StopOrder(OrderData):
-    def __init__(self, symbol=None, exchange=None, order_id=None, order_type=None, direction=None, offset=None,
-                 price=None, order_volume=None, account=None, gateway=None, order_datetime=None, comments=None):
+    def __init__(self, symbol=None, exchange=None, order_id=None,
+                 order_type=OrderType_STOP, direction=None, offset=None,
+                 price=None, order_volume=None, account=None,
+                 gateway=None, order_datetime=None, comments=None):
         # 代码信息
-        super().__init__(symbol, exchange, order_id, order_type, direction, offset, price, order_volume, account,
-                         order_datetime)
-        self.symbol = symbol
-        self.exchange = exchange
-        self.order_id = order_id
+        super().__init__(symbol, exchange, order_id,
+                         order_type, direction, offset,
+                         price, order_volume, account,
+                         gateway, order_datetime, comments)
 
-        # 报单信息
-        self.order_type = OrderType_STOP  # 报单类型
-        self.direction = direction  # 报单方向
-        self.offset = offset  # 报单开平仓
-        self.price = price  # 报单价格
-        self.volume = order_volume  # 报单数量
-        self.account = account
-        self.traded = EMPTY_INT  # 报单成交数量
-        self.status = StopOrderStatus_WAITING  # 报单状态
-        self.order_datetime = order_datetime  # 报单时间
+        # 补充报单信息
         self.filled_datetime = None
         self.cancel_datetime = None  # 撤单时间
-        self.comments = comments
-        self.gateway = gateway
 
         # 实际交易时信息
         self.front_id = EMPTY_STRING  # 前置机编号，实际交易用
@@ -126,7 +117,7 @@ class StopOrder(OrderData):
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
+        self.order_id_full = f"{self.gateway}.{self.order_id}"
 
     def is_active(self) -> bool:
         """委托订单还未成交吗？"""
@@ -158,12 +149,15 @@ class TradeData(BaseData):
     slippage: float = EMPTY_FLOAT     # 滑点值
     commission: float = EMPTY_FLOAT   # 手续费率
     comments: str = EMPTY_STRING
+    account: str = EMPTY_STRING
+    frozen: int = EMPTY_INT
+
 
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.orderid_full = f"{self.gateway}.{self.order_id}"
-        self.tradeid_full = f"{self.gateway}.{self.trade_id}"
+        self.order_id_full = f"{self.gateway}.{self.order_id}"
+        self.trade_id_full = f"{self.gateway}.{self.trade_id}"
 
 
 @dataclass
@@ -188,7 +182,7 @@ class PositionData(BaseData):
     def __post_init__(self):
         """"""
         self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.positionid_full = f"{self.symbol_full}.{self.direction}"
+        self.position_id_full = f"{self.symbol_full}.{self.direction}"
 
 
 @dataclass

@@ -114,3 +114,4 @@ Futures_contracts = {
     'CFFEX': ['IC', 'IF', 'IH', 'TS', 'TF', 'T'],
     'INE': ['sc', 'lu', 'nr']
 }
+

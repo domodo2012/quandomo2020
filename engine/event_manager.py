@@ -16,10 +16,12 @@ class EventManager:
         """初始化事件管理器"""
         # 事件对象列表
         self._eventQueue = Queue()
+
         # 事件管理器开关
         self._active = False
+
         # 事件处理线程
-        self._thread = Thread(target=self._run)
+        # self._thread = Thread(target=self._run)
 
         # 这里的_handlers是一个字典，用来保存对应的事件的响应函数
         # 其中每个键对应的值是一个列表，列表中保存了对该事件监听的响应函数，一对多
@@ -34,18 +36,18 @@ class EventManager:
         self._timer_active = False  # 计时器工作状态
         self._timer_sleep = 1  # 计时器触发间隔（默认1秒）
 
-    def _run(self):
-        """引擎运行"""
-        while self._active:
-            try:
-                # 获取事件的阻塞时间设为1秒
-                event = self.get(True, 1)
-                self._process(event)
-            except Empty:
-                # pass
-                break
+    # def _run(self):
+    #     """引擎运行"""
+    #     while self._active:
+    #         try:
+    #             # 获取事件的阻塞时间设为1秒
+    #             event = self.get(True, 1)
+    #             self.event_process(event)
+    #         except Empty:
+    #             # pass
+    #             break
 
-    def _process(self, event):
+    def event_process(self, event):
         """处理事件"""
         # 检查是否存在对该事件进行监听的处理函数
         if event.type_ in self._handlers:
@@ -69,18 +71,18 @@ class EventManager:
             # 等待
             sleep(self._timer_sleep)
 
-    def start(self, timer=True):
-        """启动"""
-        # 将事件管理器设为启动
-        self._active = True
-        # 启动事件处理线程
-        self._thread.start()
-
-        # 启动计时器，计时器事件间隔默认设定为1秒
-        if timer:
-            # self._timer_active = True
-            # self._timer.start()
-            pass
+    # def start(self, timer=True):
+    #     """启动"""
+    #     # 将事件管理器设为启动
+    #     self._active = True
+    #     # 启动事件处理线程
+    #     self._thread.start()
+    #
+    #     # 启动计时器，计时器事件间隔默认设定为1秒
+    #     if timer:
+    #         self._timer_active = True
+    #         self._timer.start()
+    #         pass
 
     def stop(self):
         """停止"""

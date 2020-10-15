@@ -21,7 +21,7 @@ class EventEngineBase(object):
 
     方法说明
     _run: 私有方法，事件处理线程连续运行用
-    _process: 私有方法，处理事件，调用注册在引擎中的监听函数
+    event_process: 私有方法，处理事件，调用注册在引擎中的监听函数
     start: 公共方法，启动引擎
     stop：公共方法，停止引擎
     register：公共方法，向引擎中注册监听函数

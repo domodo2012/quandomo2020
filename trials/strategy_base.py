@@ -167,7 +167,7 @@ class StrategyBase(object):
         self.handle_bar(bar)
 
     def handle_order(self):
-        print("run handle_order() method")
+        print("run handle_order_() method")
         pass
 
     def handle_risk(self):
