@@ -20,12 +20,11 @@ RightsAdjustment_BACKWARD = "backward"
 
 # 事件类别
 EVENT_TIMER = "event_timer"                         # 定时事件
-EVENT_MARKET = "event_market"                       # 市场数据事件
+EVENT_BAR = "event_bar"                             # 市场 bar 数据事件
 EVENT_ORDER = "event_order"                         # 委托订单事件
-EVENT_RISK_MANAGEMENT = "event_risk_management"     # 事前风控事件
+EVENT_PORTFOLIO = "event_portfolio"                 # 投资组合层面的风控事件
 EVENT_TRADE = "event_trade"                         # 成交/交易事件
-EVENT_RECORD = "update_bar_info"                       # 数据记录事件
-EVENT_ONBAR = "event_on_bar"                        # 对bar的响应事件
+EVENT_RECORD = "update_bar_info"                    # 数据记录事件
 EVENT_LOG = "event_log"                             # 日志记录事件
 EVENT_ACCOUNT = "event_account"                     # 账户事件
 EVENT_RIGHTS = "event_rights"                       # 股票的分配送转事件
@@ -43,12 +42,10 @@ EMPTY_INT = 0
 EMPTY_FLOAT = 0.0
 
 # 订单/交易/持仓的方向
-Direction_NONE = "None"
 Direction_LONG = "long"       # 做多
 Direction_SHORT = "short"     # 做空
 
 # 开平仓状态
-Offset_NONE = ""
 Offset_OPEN = "open"
 Offset_CLOSE = "close"
 Offset_CLOSETODAY = "close_today"  # 平今

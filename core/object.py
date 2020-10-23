@@ -50,13 +50,15 @@ class OrderData(BaseData):
                  direction=None,
                  offset=None,
                  price=None,
+                 filled_price=None,
                  order_volume=None,
                  filled_volume=None,
                  status=None,
                  account=None,
                  gateway=None,
                  order_datetime=None,
-                 comments=None
+                 comments=None,
+                 symbol_type=None
                  ):
         # 代码信息
         self.symbol = symbol
@@ -68,6 +70,7 @@ class OrderData(BaseData):
         self.direction = direction                         # 报单方向
         self.offset = offset                  # 报单开平仓
         self.price = price          # 报单价格
+        self.filled_price = filled_price    # 成交价格
         self.order_volume = order_volume         # 报单数量
         self.filled_volume = filled_volume         # 报单成交数量
         self.status = status           # 报单状态
@@ -77,6 +80,7 @@ class OrderData(BaseData):
         self.comments = comments
         self.gateway = gateway
         self.account = account
+        self.symbol_type = symbol_type
 
         # 实际交易时信息
         self.front_id = EMPTY_STRING        # 前置机编号，实际交易用
@@ -99,12 +103,12 @@ class StopOrder(OrderData):
     def __init__(self, symbol=None, exchange=None, order_id=None,
                  order_type=OrderType_STOP, direction=None, offset=None,
                  price=None, order_volume=None, account=None,
-                 gateway=None, order_datetime=None, comments=None):
+                 gateway=None, order_datetime=None, comments=None, symbol_type=None):
         # 代码信息
         super().__init__(symbol, exchange, order_id,
                          order_type, direction, offset,
                          price, order_volume, account,
-                         gateway, order_datetime, comments)
+                         gateway, order_datetime, comments, symbol_type)
 
         # 补充报单信息
         self.filled_datetime = None
@@ -138,7 +142,7 @@ class TradeData(BaseData):
 
     # 成交相关
     direction: str = None                 # 交易方向
-    offset: str = Offset_NONE               # 成交开平
+    offset: str = None               # 成交开平
     price: float = EMPTY_FLOAT        # 成交价格
     volume: float = EMPTY_FLOAT       # 成交数量
     datetime: datetime = None                   # 成交时间
@@ -151,7 +155,7 @@ class TradeData(BaseData):
     comments: str = EMPTY_STRING
     account: str = EMPTY_STRING
     frozen: int = EMPTY_INT
-
+    symbol_type: str = EMPTY_STRING
 
     def __post_init__(self):
         """"""
@@ -166,18 +170,25 @@ class PositionData(BaseData):
     # 编号代码信息
     symbol: str = EMPTY_STRING                                 # 合约代码
     exchange: str = Exchange_SSE                         # 交易所代码
-    account_id: str = EMPTY_STRING                             # 资金账号代码
+    account: str = EMPTY_STRING                             # 资金账号代码
+    trade_id: str = EMPTY_STRING
+    order_id: str = EMPTY_STRING
 
     # 持仓信息
-    direction: str = Direction_NONE                       # 持仓方向
-    volume: float = EMPTY_FLOAT       # 持仓数量
+    datetime: str = None
+    direction: str = None                       # 持仓方向
+    offset: str = None
+    init_volume: float = EMPTY_FLOAT       # 初始持仓数量
+    volume: float = EMPTY_FLOAT       # 除权除息/换月移仓之后的持仓数量
     frozen: float = EMPTY_FLOAT       # 冻结数量
-    average_price: float = EMPTY_FLOAT        # 持仓价格
+    init_price: float = EMPTY_FLOAT        # 初始持仓价格
+    price: float = EMPTY_FLOAT        # 除权除息/换月移仓之后的持仓价格
     position_pnl: float = EMPTY_FLOAT          # 持仓盈亏
     yd_volume: float = EMPTY_FLOAT    # 昨持数量（期货）
     multiplier: int = EMPTY_INT      # 合约乘数
     price_tick: float = EMPTY_FLOAT   # 最小价格跳动
     margin: float = EMPTY_FLOAT       # 保证金率
+    symbol_type: str = EMPTY_STRING
 
     def __post_init__(self):
         """"""
@@ -185,18 +196,16 @@ class PositionData(BaseData):
         self.position_id_full = f"{self.symbol_full}.{self.direction}"
 
 
-@dataclass
 class AccountData(BaseData):
     """账户信息，包含总资产、冻结资产、可用资金（现金）"""
-    account_id: str = EMPTY_STRING                                  # 资金账号代码
-    pre_balance: float = EMPTY_FLOAT      # 昨日账户总资产
-    total_balance: float = EMPTY_FLOAT    # 今日账户总资产
-    frozen: float = EMPTY_FLOAT           # 冻结资产
-
-    def __post_init__(self):
-        """"""
-        self.available = self.total_balance - self.frozen       # 可用资金
-        self.account_id_full = f"{self.gateway}.{self.account_id}"
+    def __init__(self):
+        self.account_id: str = EMPTY_STRING                                  # 资金账号代码
+        self.datetime = None
+        self.pre_balance: float = EMPTY_FLOAT      # 昨日账户总资产
+        self.total_balance: float = EMPTY_FLOAT    # 今日账户总资产
+        self.frozen: float = EMPTY_FLOAT           # 冻结资产
+        self.gateway: str = EMPTY_STRING
+        self.available: float = self.total_balance - self.frozen       # 可用资金
 
 
 @dataclass

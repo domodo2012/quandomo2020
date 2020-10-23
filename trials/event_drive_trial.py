@@ -16,7 +16,7 @@ from core.utility import (
     get_exchange,
     generate_random_id,
     round_to,
-    get_contract_params
+    get_symbol_params
 )
 from core.object import OrderData, StopOrder, TradeData
 from core.context import Context
@@ -51,7 +51,7 @@ class StrategyBase(object):
         self.event_engine = EventManager()
 
         # 各类事件的监听/回调函数注册
-        self.event_engine.register(EVENT_MARKET, self.update_bar)
+        self.event_engine.register(EVENT_BAR, self.update_bar)
         self.event_engine.register(EVENT_ORDER, self.handle_order)
         self.event_engine.register(EVENT_ORDER, self.handle_risk)
         self.event_engine.register(EVENT_TRADE, self.handle_trade)
@@ -123,7 +123,7 @@ class StrategyBase(object):
                         # 回测模式下，市场数据通过生成器推送过来，并生成市场事件
                         self.timestamp = next(bmi_iter)
                         self.datetime = timestamp_to_datetime(self.timestamp, format="%Y%m%d")
-                        event_market = Event(EVENT_MARKET, self.datetime, self.gateway)
+                        event_market = Event(EVENT_BAR, self.datetime, self.gateway)
                         self.event_engine.put(event_market)
                     else:
                         # todo: live模式下，市场数据通过api订阅后推送过来
@@ -295,7 +295,7 @@ class StrategyBase(object):
             self.context.trade_data_dict[trade.trade_id] = trade
 
     def update_bar(self, event_market):
-        """新出现市场事件 event_market 时的监听/回调函数，在回测模式下，模拟委托单的撮合动作"""
+        """新出现市场事件 event_bar 时的监听/回调函数，在回测模式下，模拟委托单的撮合动作"""
         print("this is update_bar() @ {0}".format(event_market.dt))
 
         self.bar_index += 1
@@ -350,7 +350,7 @@ class StrategyBase(object):
         # 股票视为100%保证金
         # 考虑到手续费、滑点等情况，现金应该多于开仓资金量的 110%
         if event_order.data.offset == 'open':
-            contract_params = get_contract_params(event_order.data.symbol)
+            contract_params = get_symbol_params(event_order.data.symbol)
             trade_balance = self.context.current_order_data.order_volume * self.context.current_order_data.price * \
                             contract_params['multiplier'] * contract_params['margin']
 
@@ -492,11 +492,11 @@ class StrategyBase(object):
                     # print(self.context.current_trade_data.offset, "方向"*10)
                     if self.context.current_trade_data.offset == Offset_OPEN:
                         total_position = position_data.position + self.context.current_trade_data.trade_volume
-                        position_cost_balance = position_data.position * position_data.average_price
+                        position_cost_balance = position_data.position * position_data.init_price
                         trade_balance = \
                             self.context.current_trade_data.trade_volume * self.context.current_trade_data.price
                         # 更新持仓成本
-                        position_data.average_price = \
+                        position_data.init_price = \
                             (position_cost_balance + trade_balance) / total_position
                         # 更新持仓数量
                         position_data.position = total_position
@@ -507,25 +507,25 @@ class StrategyBase(object):
                     elif self.context.current_trade_data.offset == Offset_CLOSE:
                         total_position = \
                             position_data.position - self.context.current_trade_data.trade_volume
-                        position_cost_balance = position_data.position * position_data.average_price
+                        position_cost_balance = position_data.position * position_data.init_price
                         trade_balance = \
                             self.context.current_trade_data.trade_volume * self.context.current_trade_data.price
                         if total_position > 0:
-                            position_data.average_price = \
+                            position_data.init_price = \
                                 (position_cost_balance - trade_balance) / total_position
                         else:
-                            position_data.average_price = 0
+                            position_data.init_price = 0
                         position_data.position = total_position
                         # print("sell position"*5, position_data.position)
 
             # 持仓不为空，且不在持仓里面的，append到self.context.bar_position_data_list
             if position_num == len(self.context.bar_position_data_list) and position_hold is False:
-                self.context.current_position_data.average_price = self.context.current_trade_data.trade_price
+                self.context.current_position_data.init_price = self.context.current_trade_data.trade_price
                 self.context.current_position_data.position = self.context.current_trade_data.trade_volume
                 self.context.bar_position_data_list.append(self.context.current_position_data)
 
         else:
-            self.context.current_position_data.average_price = self.context.current_trade_data.trade_price
+            self.context.current_position_data.init_price = self.context.current_trade_data.trade_price
             self.context.current_position_data.position = self.context.current_trade_data.trade_volume
             # 持仓为空，append到self.context.bar_position_data_list
             self.context.bar_position_data_list.append(self.context.current_position_data)
@@ -595,7 +595,7 @@ class StrategyBase(object):
         if self.run_mode == RunMode_LIVE:
             order_id = None
         else:
-            stock_paras = get_contract_params(stock)
+            stock_paras = get_symbol_params(stock)
             price = round_to(price, stock_paras['price_tick'])
 
             if is_stop:
@@ -667,7 +667,7 @@ class StrategyBase(object):
         """处理当日情况前，先更新当日股票的持仓冻结数量"""
         if self.bar_index > 0 and self.context.bar_position_data_list:
             last_timestamp = self.context.benchmark_index[self.bar_index - 1]
-            last_day = timestamp_to_datetime(last_timestamp, '%Y%M%d')
+            last_day = timestamp_to_datetime(last_timestamp, '%Y%m%d')
             for position_data in self.context.bar_position_data_list:
                 if last_day != dt:
                     position_data.frozen = 0
@@ -691,7 +691,7 @@ class StrategyBase(object):
                                                           start=dt,
                                                           end=dt)
                 position_data.position_pnl = position_data.position * (
-                        cur_close - position_data.average_price
+                        cur_close - position_data.init_price
                 )
         print("—— * 以当前bar的close更新持仓盈亏 *")
 

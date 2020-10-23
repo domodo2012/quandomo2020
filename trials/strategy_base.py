@@ -41,8 +41,8 @@ class StrategyBase(object):
         self.strat_event_engine = EventEngineBase(timer_interval=0.2)
 
         # 市场事件的监听/回调函数注册
-        self.strat_event_engine.register(EVENT_MARKET, self.new_bar)
-        # self.event_engine.register(EVENT_MARKET, self.handle_bar)
+        self.strat_event_engine.register(EVENT_BAR, self.new_bar)
+        # self.event_engine.register(EVENT_BAR, self.handle_bar)
 
         # 订单委托事件的监听/回调函数注册
         self.strat_event_engine.register(EVENT_ORDER, self.handle_order)
@@ -143,7 +143,7 @@ class StrategyBase(object):
                 # 在历史数据上跑，以实时的形式回测。之所以用时间戳为索引，是统一时间轴格式
                 self.datetime = timestamp_to_datetime(self.timestamp, format="%Y%m%d")
                 self.bar_index += 1
-                cur_event = Event(EVENT_MARKET, self.datetime)
+                cur_event = Event(EVENT_BAR, self.datetime)
                 self.strat_event_engine.put(cur_event)
                 # print("{0} {1}".format(self.datetime, cur_event.event_type))
                 # run_bar_engine(self)        # 启动 bar_engine 进行事件驱动的回测

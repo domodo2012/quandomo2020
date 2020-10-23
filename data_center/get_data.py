@@ -41,8 +41,8 @@ class GetData(object):
 
     def get_market_data(self, market_data, stock_code=[], field=[], start="", end="", count=-1):
         """
-        从dataframe解析数据成最终的数据格式，count都在这里做
-        因为停牌或者其他原因取不到数据的，１　２　３　返回的是－１，其他返回的是pandas的空或者NaN，所以可以使用　＞０判断是否取到值
+        从 dataframe 解析数据成最终的数据格式
+        因为停牌或者其他原因取不到数据的，１　２　３　返回的是－１，其他返回的是 pandas 的空或者 NaN，所以可以使用　＞０判断是否取到值
         """
         if start != "":
             if isinstance(start, str):

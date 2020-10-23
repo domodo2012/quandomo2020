@@ -170,7 +170,7 @@ class Event:
 
 
 EVENT_TIMER = "event_timer"                         # 定时事件
-EVENT_MARKET = "event_market"                       # 市场数据事件
+EVENT_MARKET = "event_bar"                       # 市场数据事件
 EVENT_ORDER = "event_order"                         # 委托订单事件
 EVENT_RISK = "event_risk_management"     # 事前风控事件
 EVENT_TRADE = "event_trade"                         # 成交/交易事件
@@ -212,7 +212,7 @@ if __name__ == '__main__':
             print('data over')
             break
         else:
-            event = Event('event_market', x)
+            event = Event('event_bar', x)
             trial_engine.put(event)
 
     pass

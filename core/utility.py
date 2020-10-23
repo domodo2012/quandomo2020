@@ -7,7 +7,7 @@ import time
 import logging
 from typing import Dict, Tuple, Union
 from decimal import Decimal
-from math import floor, ceil
+from math import floor, ceil, isnan
 from functools import wraps
 from csv import DictReader
 from re import findall
@@ -640,7 +640,7 @@ def read_symbol_settings(filename: str):
     return settings
 
 
-def get_contract_params(symbol_code: str) -> Dict:
+def get_symbol_params(symbol_code: str) -> Dict:
     """输入symbol_full 格式的合约代码，输出对应的合约乘数、最小变动单位等参数 """
 
     symbol, exchg = symbol_code.split('.')
@@ -729,4 +729,18 @@ def generate_random_id(topic, lens=8):
     _list = [str(i) for i in range(10)]
     num = sample(_list, lens)
     return "{}_{}".format(topic, "".join(num))
+
+
+def dict_to_output_table(results: dict):
+    col_width_keys = max([len(key) for key in results.keys()])
+    col_width_values = max([len(str(value)) for value in results.values()])
+    table_end_str = ("+-" + (col_width_keys + col_width_values + 3) * "-" + "-+")
+    data_strs = []
+
+    for key, value in results.items():
+        data_strs.append("| " +
+                         " | ".join(["{:{}}".format(key, col_width_keys), "{:{}}".format(value, col_width_values)]) +
+                         " |\n")
+
+    return "%s\n%s%s" % (table_end_str, "".join(data_strs), table_end_str)
 

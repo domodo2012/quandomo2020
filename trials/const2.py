@@ -42,7 +42,7 @@ class DatabaseName(Enum):
 class EventType(Enum):
     """事件类别"""
     EVENT_TIMER = "event_timer"                         # 定时事件
-    EVENT_MARKET = "event_market"                       # 市场数据事件
+    EVENT_MARKET = "event_bar"                       # 市场数据事件
     EVENT_ORDER = "event_order"                         # 委托订单事件
     EVENT_RISK_MANAGEMENT = "event_risk_management"     # 事前风控事件
     EVENT_TRADE = "event_trade"                         # 成交/交易事件

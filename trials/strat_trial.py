@@ -9,13 +9,13 @@ from core.utility import (
     date_str_to_int,
     Timer,
 )
-from strategy.strategy_base_backtest import StrategyBaseBacktest
+from strategy.strategy_base_backtest import StrategyBaseBacktestStock
 
 
 # 继承strategy基类
-class TrialStrategy(StrategyBaseBacktest):
+class TrialStrategyStock(StrategyBaseBacktestStock):
     def __init__(self):
-        super(TrialStrategy, self).__init__()
+        super(TrialStrategyStock, self).__init__()
 
     def init_strategy(self):  # 父类中有定义，但是没有实现，此处实现
         # 设置运行模式，回测或者交易
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # 测试运行完整个策略所需时间
     time_test = Timer(True)
     with time_test:
-        trial_strategy = TrialStrategy()
+        trial_strategy = TrialStrategyStock()
         trial_strategy.init_strategy()
         trial_strategy.run_strategy()
         trial_strategy.strategy_analysis()  # 绩效分析

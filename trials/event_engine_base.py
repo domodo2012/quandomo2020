@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     ee = EventEngineBase(timer_interval=0.1)
     ee.register(EVENT_TIMER, simple_test)
-    # ee.register(EventType.EVENT_MARKET.value, simple_test)
+    # ee.register(EventType.EVENT_BAR.value, simple_test)
     # ee.register_general_handler(simple_test)
 
     ee.put(Event(EVENT_TIMER))
