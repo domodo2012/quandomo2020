@@ -2,7 +2,7 @@
 """
 交易的入口文件
 """
-from strategy.trial_strategy import TrialStrategy
+from trial_strategy import TrialStrategy
 
 # 实例化策略
 strategy = TrialStrategy()

@@ -30,6 +30,8 @@ EVENT_ACCOUNT = "event_account"                     # 账户事件
 EVENT_RIGHTS = "event_rights"                       # 股票的分配送转事件
 EVENT_DELIVERY = "event_delivery"                   # 期货交割事件
 EVENT_STRATEGY = "event_strategy"                   # 组合管理器对所管策略的调整事件
+EVENT_POOL = "event_pool"                           # 股票池更新事件
+EVENT_BLACK_LIST = "event_black_list"               # 黑名单更新事件
 
 Record_ORDER_DATA = "order_data"
 Record_TRADE_DATA = "trade_data"
@@ -89,17 +91,23 @@ Exchange_SGE = "SGE"             # Shanghai Gold Exchange
 
 # 产品类别
 Product_STOCK = "stock"         # 股票
-Product_STOCK_SH = "stock_sh"         # 股票
-Product_STOCK_SZ = "stock_sz"         # 股票
+Product_STOCK_SH = "stock_sh"         # 上海股票
+Product_STOCK_SZ = "stock_sz"         # 深圳股票
 Product_FUTURES = "futures"     # 期货
 Product_INDEX = "index"         # 指数
 
-# 数据库名（主要是mongodb里的）"""
+# 数据库名
 MongoDbName_MARKET_DATA_DAILY = "market_data_daily"
 MongoDbName_FINANCIAL_DATA = "financial_data"
 MongoDbName_MARKET_DATA_1_MIN = "market_data_1min"
 MongoDbName_DAILY_DB_NAME = 'market_data_daily'
 MongoDbName_MINUTE_DB_NAME = 'Min_Db'
+
+
+DATABASE_SQLITE_BASE = "base_data.db"
+DATABASE_SQLITE_MARKET = "market_data.db"
+DATABASE_SQLITE_FACTOR = "factor_data.db"
+
 
 Futures_contracts = {
     'SHFE': ['cu', 'al', 'zn', 'ni', 'sn', 'au', 'ag', 'rb', 'wr', 'hc', 'ss',

@@ -4,7 +4,9 @@
 """
 
 import time
+import colorlog  # 控制台日志输入颜色
 import logging
+from logging.handlers import RotatingFileHandler  # 按文件大小滚动备份
 from typing import Dict, Tuple, Union
 from decimal import Decimal
 from math import floor, ceil, isnan
@@ -12,6 +14,7 @@ from functools import wraps
 from csv import DictReader
 from re import findall
 from random import sample
+from os import path, mkdir
 
 import numpy as np
 import talib
@@ -23,16 +26,114 @@ log_formatter = logging.Formatter('[%(asctime)s] %(message)s')
 file_handlers: Dict[str, logging.FileHandler] = {}
 
 
-def get_file_logger(filename: str) -> logging.Logger:
-    """返回一个将记录写入文件中的记录器"""
-    logger = logging.getLogger(filename)
-    handler = file_handlers.get(filename, None)
-    if handler is None:
-        handler = logging.FileHandler(filename)
-        file_handlers[filename] = handler
-    handler.setFormatter(log_formatter)
-    logger.addHandler(handler)  # each handler will be added only once.
-    return logger
+class ColorLogger(object):
+    def __init__(self, log_name):
+        self.logName = log_name
+        self.log_colors_config = {
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'red',
+        }
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        self.formatter = colorlog.ColoredFormatter(
+            '%(log_color)s[%(asctime)s] '
+            '[%(filename)s:%(lineno)d] '
+            '[%(module)s:%(funcName)s] '
+            '[%(levelname)s]- %(message)s',
+            log_colors=self.log_colors_config)  # 日志输出格式
+
+    def timestamp_to_time(self, timestamp):
+        """格式化时间"""
+        timeStruct = time.localtime(timestamp)
+        return str(time.strftime('%Y-%m-%d', timeStruct))
+
+    def __console(self, level, message):
+        # 创建一个FileHandler，用于写到本地
+        fh = RotatingFileHandler(filename=self.logName, mode='a', maxBytes=1024 * 1024 * 5, backupCount=5,
+                                 encoding='utf-8')  # 使用RotatingFileHandler类，滚动备份日志
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(self.formatter)
+        self.logger.addHandler(fh)
+
+        # 创建一个StreamHandler,用于输出到控制台
+        ch = colorlog.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(self.formatter)
+        self.logger.addHandler(ch)
+
+        if level == 'info':
+            self.logger.info(message)
+        elif level == 'debug':
+            self.logger.debug(message)
+        elif level == 'warning':
+            self.logger.warning(message)
+        elif level == 'error':
+            self.logger.error(message)
+        # 这两行代码是为了避免日志输出重复问题
+        self.logger.removeHandler(ch)
+        self.logger.removeHandler(fh)
+        fh.close()  # 关闭打开的文件
+
+    def debug(self, message):
+        self.__console('debug', message)
+
+    def info(self, message):
+        self.__console('info', message)
+
+    def warning(self, message):
+        self.__console('warning', message)
+
+    def error(self, message):
+        self.__console('error', message)
+
+
+class Logger(object):
+    def __init__(self, logger_dir, set_level='DEBUG', filemode='w'):
+        self.logger = logging.getLogger(logger_dir)
+        # 设置输出的等级
+        level_dict = {'NOSET': logging.NOTSET,
+                      'DEBUG': logging.DEBUG,
+                      'INFO': logging.INFO,
+                      'WARNING': logging.WARNING,
+                      'ERROR': logging.ERROR,
+                      'CRITICAL': logging.CRITICAL}
+        # 创建文件目录
+        if path.exists(logger_dir):
+            pass
+        else:
+           mkdir(logger_dir)
+
+        cur_datetime = time.strftime("%Y-%m-%d_%H%M%S", time.localtime())
+        file_name = '{0}log_{1}.csv'.format(logger_dir, cur_datetime)
+        logging.basicConfig(level=level_dict[set_level],
+                            format='%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S',
+                            filename=file_name,
+                            filemode=filemode)
+        file_handler = logging.FileHandler(filename=file_name, encoding='utf-8')
+
+        # 控制台句柄
+        console = logging.StreamHandler()
+
+        # 添加内容到日志句柄中
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console)
+        self.logger.removeHandler(file_handler)
+
+    def info(self, *message):
+        self.logger.info(message)
+
+    def debug(self, *message):
+        self.logger.debug(message)
+
+    def warning(self, *message):
+        self.logger.warning(message)
+
+    def error(self, *message):
+        self.logger.error(message)
 
 
 class Timer(object):

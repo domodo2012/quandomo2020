@@ -2,14 +2,15 @@
 """
 策略模板基类
 """
+
 from copy import deepcopy
 from abc import abstractmethod
-from queue import Empty
 from time import sleep, time
 from pandas import DataFrame, to_datetime, Series
 from numpy import cov, var, std
 from math import sqrt
 from pyecharts import Line, Page
+from queue import Empty
 
 from core.const import *
 from core.event import Event
@@ -53,9 +54,7 @@ class StrategyBaseBacktestStock(object):
         self.bar_len = None
         self.activate_trade_signal = False
 
-        self.pos = {}  # 某些合约每个bar的动态持仓总值，用于下单时判断持仓
         self.context = Context(self.gateway)  # 记录、计算交易过程中各类信息
-        # self.fields = ['open', 'high', 'low', 'close', 'order_volume', 'open_interest']
         self.fields = ['open', 'high', 'low', 'close', 'volume']
 
         # 事件驱动引擎实例化
@@ -65,7 +64,7 @@ class StrategyBaseBacktestStock(object):
         self.event_engine.register(EVENT_BAR, self.update_bar)
         self.event_engine.register(EVENT_ORDER, self.handle_order)
         self.event_engine.register(EVENT_PORTFOLIO, self.handle_portfolio_risk)
-        self.event_engine.register(EVENT_TRADE, self.handle_trade)
+        self.event_engine.register(EVENT_TRADE, self.handle_trade_)
         # self.event_engine.register_general(self.update_bar_info)
 
         # 绩效指标
@@ -77,7 +76,7 @@ class StrategyBaseBacktestStock(object):
                      slippage_type=SLIPPAGE_FIX,
                      value=0):
         self.context.slippage_dict[symbol_type] = {"slippage_type": slippage_type,
-                                                  "value": value}
+                                                   "value": value}
 
     # 回测手续费和印花税
     def set_commission(self,
@@ -106,16 +105,15 @@ class StrategyBaseBacktestStock(object):
         # 从数据库读取数据
         # todo: 现在先将所有数据都取到内存，以后为了减少内存占用，考虑只读入close（每个bar上都要用来计算账户净值，必须读入内存中），
         #  其他数据用到时才从数据库中取，交易次数不多的话，对速度的影响不大。
-        stk_all_list = self.universe + [self.benchmark]
-        self.context.daily_data = self.get_data.get_all_market_data(stock_code=stk_all_list,
+        symbol_all_list = self.universe + [self.benchmark]
+        self.context.daily_data = self.get_data.get_all_market_data(stock_code=symbol_all_list,
                                                                     field=self.fields,
                                                                     start=self.start,
                                                                     end=self.end,
                                                                     interval=Interval_DAILY)
-        # 生成 benchmark 的 bar_index 数据
+        # 将 benchmark 的时间轴转成时间戳 list，最后转成迭代器，供推送时间事件用
         self.context.benchmark_index = [datetime_to_timestamp(str(int(i)), '%Y%m%d')
                                         for i in self.context.daily_data["close"].loc[self.benchmark].index]
-        # 将benchmark的时间戳做成迭代器
         bmi_iter = iter(self.context.benchmark_index)
 
         self.bar_index = 0
@@ -131,18 +129,16 @@ class StrategyBaseBacktestStock(object):
                     event_market = Event(EVENT_BAR, self.datetime, self.gateway)
                     self.event_engine.put(event_market)
                 except StopIteration:
-                    print('策略运行完成')
-                    # self.strategy_analysis()
-                    # self.show_results()
+                    self.context.logger.info('策略运行完成，计算绩效。。。')
                     break
             else:
                 # 监听/回调函数根据事件类型处理事件
                 self.event_engine.event_process(cur_event)
-                # sleep(0.1)      # 模拟实时行情中每个行情之间的时间间隔
+                # sleep(0.8)      # 模拟实时行情中每个行情之间的时间间隔
 
     def cross_limit_order(self, event_market, cur_mkt_data):
         """处理未成交限价单，如有成交即新建成交事件"""
-        print("-- this is cross_limit_order() @ {0}".format(event_market.dt))
+        # self.context.logger.info("-- this is cross_limit_order() @ {0}".format(event_market.dt))
 
         # 逐个未成交委托进行判断
         for order in list(self.context.active_limit_orders.values()):
@@ -173,10 +169,8 @@ class StrategyBaseBacktestStock(object):
 
             if long_cross:
                 trade_price = min(order.price, long_best_price)
-                # pos_change = order.order_volume
             else:
                 trade_price = max(order.price, short_best_price)
-                # pos_change = -order.order_volume
 
             # 委托单被成交了，相应的属性变更
             order.filled_volume = order.order_volume
@@ -184,14 +178,14 @@ class StrategyBaseBacktestStock(object):
             order.filled_price = trade_price
             order.status = Status_ALL_TRADED
             self.context.limit_orders[order.order_id].status = Status_ALL_TRADED
-            event_order = Event(EVENT_ORDER, event_market.dt, order)
 
+            event_order = Event(EVENT_ORDER, event_market.dt, order)
             self.context.bar_order_data_dict[order.symbol] = deepcopy(order)
 
             # live状态下的运行逻辑是将 event_order 事件送到队列中，
             # 但是在回测中暂无法并行处理，直接调用 handle_order 更好一些
-            # self.event_engine.put(event_order)
-            self.handle_order(event_order)
+            self.event_engine.put(event_order)
+            # self.handle_order(event_order)
 
             # 将当前委托单从未成交委托单清单中去掉
             self.context.active_limit_orders.pop(order.order_id)
@@ -215,7 +209,6 @@ class StrategyBaseBacktestStock(object):
                               symbol_type=order.symbol_type,
                               comments=order.comments
                               )
-            # self.pos[trade.symbol] += pos_change
 
             # 及时更新 context 中的成交信息
             # self.context.current_trade_data = trade
@@ -228,7 +221,7 @@ class StrategyBaseBacktestStock(object):
 
     def cross_stop_order(self, event_market, cur_mkt_data):
         """处理未成交止损单"""
-        print("-- this is cross_stop_order() @ {0}.".format(event_market.dt))
+        # self.context.logger.info("-- this is cross_stop_order() @ {0}.".format(event_market.dt))
 
         # 逐个未成交委托进行判断
         for stop_order in list(self.context.active_stop_orders.values()):
@@ -321,7 +314,6 @@ class StrategyBaseBacktestStock(object):
                               account=order.account,
                               comments=order.comments
                               )
-            # self.pos[trade.symbol] += pos_change
 
             # 及时更新 context 中的交易信息
             # self.context.current_trade_data = deepcopy(trade)
@@ -333,7 +325,7 @@ class StrategyBaseBacktestStock(object):
 
     def update_bar(self, event_bar):
         """新出现市场事件 event_bar 时的监听/回调函数，在回测模式下，模拟委托单的撮合动作"""
-        print("this is update_bar() @ {0}".format(event_bar.dt))
+        # self.context.logger.info("this is update_bar() @ {0}".format(event_bar.dt))
 
         # 处理股票今日持仓的冻结数量（股票当日买入不能卖出）
         self.update_position_frozen(event_bar.dt)
@@ -374,7 +366,6 @@ class StrategyBaseBacktestStock(object):
         # 如果当前 bar 没有触发新的交易信号，则看是否会触发投资组合的调整信号
         if not self.activate_trade_signal:
             self.handle_portfolio_risk(event_bar)
-            # self.activate_trade_signal = False
 
         # 当前bar的持仓、账户信息更新
         self.update_bar_info(event_bar)
@@ -382,7 +373,7 @@ class StrategyBaseBacktestStock(object):
     def handle_portfolio_risk(self, event_bar):
         """投资组合的调整"""
         # todo: 单一合约的开仓市值是否超过总账户的1 / 3，或者其他限制
-        print('handle_portfolio_risk method @ {0}'.format(event_bar.dt))
+        # self.context.logger.info('handle_portfolio_risk method @ {0}'.format(event_bar.dt))
 
         pass
 
@@ -394,16 +385,19 @@ class StrategyBaseBacktestStock(object):
         3）在当日交易 dict 中新增该笔交易
         4）当日标的物持仓更新        
         """
-        print('handle_trade() method @ {0}'.format(event_trade.data.datetime))
+        # self.context.logger.info('handle_trade() method @ {0}'.format(event_trade.data.datetime))
+        self.context.logger.info('-- 委托成交在 {0}'.format(event_trade.data.datetime))
 
         cur_symbol = event_trade.data.symbol
         cur_symbol_type = event_trade.data.symbol_type
         symbol_type_short = cur_symbol_type.split('_')[0]
+        symbol_params = get_symbol_params(cur_symbol)
 
         # 更新 context 中的当前成交信息
         self.context.current_trade_data = deepcopy(event_trade.data)
 
         # 计算滑点成交价位
+        order_price = self.context.current_trade_data.price
         if self.context.slippage_dict[symbol_type_short]["slippage_type"] == SLIPPAGE_FIX:
             if self.context.current_trade_data.offset == Offset_OPEN:
                 if self.context.current_trade_data.direction == Direction_LONG:
@@ -429,6 +423,7 @@ class StrategyBaseBacktestStock(object):
             elif self.context.current_trade_data.offset == Offset_CLOSE:
                 self.context.current_trade_data.price *= (
                         1 - self.context.slippage_dict[symbol_type_short]["value"])
+        cur_slippage = self.context.current_trade_data.price - order_price
 
         # 分市场标的计算手续费率
         commission = self.context.commission_dict[cur_symbol_type]
@@ -453,6 +448,11 @@ class StrategyBaseBacktestStock(object):
                 trade_balance += cur_commission
 
         self.context.current_trade_data.price = trade_balance / self.context.current_trade_data.volume
+        self.context.current_trade_data.commission = cur_commission
+        self.context.current_trade_data.slippage = cur_slippage
+        self.context.current_trade_data.margin = symbol_params['margin']
+        self.context.current_trade_data.multiplier = symbol_params['multiplier']
+        self.context.current_trade_data.price_tick = symbol_params['price_tick']
 
         self.context.current_commission_data = cur_commission
         self.context.bar_commission_data_dict[cur_symbol] = self.context.current_commission_data
@@ -538,28 +538,30 @@ class StrategyBaseBacktestStock(object):
         # 交易完成，相应的委托清除
         self.context.refresh_current_data()
 
-        self.handle_trade()
+        self.handle_trade(event_trade)
 
         # 订单状态及时更新
-        print('--- * update trade info *')
+        # self.context.logger.info('--- * update trade info *')
 
     def handle_timer(self, event_timer):
         """每隔固定时间，就获取一次账户状态数据，只在 live 模式中有效"""
-        print('... di da di, {0} goes, updates account status'.format(event_timer.type_))
+        self.context.logger.info('... di da di, {0} goes, updates account status'.format(event_timer.type_))
         pass
 
     def update_bar_info(self, event_market: object):
-        """每个bar所有事件都处理完成后，更新该bar下总体情况，内容包括：
-        1、持仓数量为0的仓位，清掉；
-        2、以当日收盘价计算所持合约的当日pnl，并汇总得到当日账户总pnl,计算当日账户总值；
-        3、将每根bar上的资金、持仓、委托、成交存入以时间戳为键索引的字典变量中；
-        4、更新当前bar的委托、交易情况
-        """
-        print('this is update_bar_info() @ {0}'.format(event_market.dt))
+        """每个bar所有事件都处理完成后，更新该bar下相关数据"""
+        # self.context.logger.info('this is update_bar_info() @ {0}'.format(event_market.dt))
 
+        # 清除持仓数量为0的仓位
         self.delete_position_zero()
+
+        # 以当日收盘价计算所持合约的当日pnl，并汇总计算当日账户总pnl、当日账户总值
         self.update_position_and_account_bar_data(event_market.dt)
+
+        # 将每根bar上的资金、持仓、委托、成交存入以时间戳为键索引的字典变量中
         self.save_current_bar_data(event_market.dt)
+
+        # 更新当前bar的委托、交易情况
         self.context.refresh_bar_dict()
 
     def buy(self, dt, account, stock: str, price: float, volume: int, is_stop: bool, comments: str = ''):
@@ -594,7 +596,7 @@ class StrategyBaseBacktestStock(object):
             else:
                 self.send_limit_order(dt, account, symbol, diretion, offset, price, cur_order_volume, comments)
         else:
-            print('*** 事前风控未通过，委托单不发送出去 ***')
+            self.context.logger.info('*** 事前风控未通过，委托单不发送出去 ***')
 
     def send_order_portfolio(self, dt, account, stock, diretion, offset, price, volume, comments):
         stock_paras = get_symbol_params(stock)
@@ -657,7 +659,7 @@ class StrategyBaseBacktestStock(object):
         event_order = Event(EVENT_ORDER, dt, order)
         self.event_engine.put(event_order)
 
-    def data_to_dataframe(self, data_obj, data_dict, fpath):
+    def data_to_dataframe(self, data_obj, data_dict, output_path):
         data_property = [i for i in dir(data_obj) if i not in dir(deepcopy(EmptyClass()))]
         data_property = [i for i in data_property if i[0] != '_']
         if 'is_active' in data_property:
@@ -673,24 +675,24 @@ class StrategyBaseBacktestStock(object):
                 values.extend(timestamp_data_list)
 
         all_data = DataFrame(values, columns=data_property)
-        all_data.to_pickle(fpath)
+        all_data.to_pickle(output_path)
         return all_data
 
-    def strategy_analysis(self, fpath):
+    def strategy_analysis(self, output_path):
         """策略的绩效分析"""
         # 1、将 order、trade、position、account 数据转成 dataframe，并以 pkl 格式保存到指定目录
         self.context.backtesting_record_order = self.data_to_dataframe(self.context.current_order_data,
                                                                        self.context.order_data_dict,
-                                                                       fpath + 'order_data.pkl')
+                                                                       output_path + 'order_data.pkl')
         self.context.backtesting_record_trade = self.data_to_dataframe(self.context.current_trade_data,
                                                                        self.context.trade_data_dict,
-                                                                       fpath + 'trade_data.pkl')
+                                                                       output_path + 'trade_data.pkl')
         self.context.backtesting_record_position = self.data_to_dataframe(self.context.current_position_data,
                                                                           self.context.position_data_dict,
-                                                                          fpath + 'position_data.pkl')
+                                                                          output_path + 'position_data.pkl')
         self.context.backtesting_record_account = self.data_to_dataframe(self.context.current_account_data,
                                                                          self.context.account_data_dict,
-                                                                         fpath + 'account_data.pkl')
+                                                                         output_path + 'account_data.pkl')
 
         # 2、计算绩效指标
         # 计算 benckmark 的净值
@@ -702,15 +704,18 @@ class StrategyBaseBacktestStock(object):
                                                  )
         bm_nv = bm_close / bm_close.iloc[0]
 
-        # 计算策略的净值
+        # 计算策略的净值，为消除 warning，用中间变量 x 处理一下
         strat_value = self.context.backtesting_record_account[['datetime', 'total_balance']]
-        strat_value = strat_value.set_index('datetime')
+        x = strat_value.copy()
+        x.loc[:, 'datetime'] = x.loc[:, 'datetime'].apply(date_str_to_int)
+        strat_value = x.set_index('datetime')
+
         strat_nv = strat_value['total_balance'] / strat_value['total_balance'].iloc[0]
 
         # 计算收益率、年化收益率
         bt_period = (to_datetime(str(self.end)) - to_datetime(str(self.start))).days / 365
-        bm_ret = bm_nv.iloc[0] / bm_nv.iloc[-1] - 1
-        strat_ret = strat_nv.iloc[0] / strat_nv.iloc[-1] - 1
+        bm_ret = bm_nv.iloc[-1] / bm_nv.iloc[0] - 1
+        strat_ret = strat_nv.iloc[-1] / strat_nv.iloc[0] - 1
         bm_annnual_ret_arith = bm_ret / bt_period
         strat_annual_ret_arith = strat_ret / bt_period
 
@@ -724,9 +729,8 @@ class StrategyBaseBacktestStock(object):
         else:
             strat_beta = 0
 
-        risk_free_ret = 0.03
-        strat_alpha = strat_nv.iloc[-1] / strat_nv.iloc[0] - 1 - risk_free_ret - \
-                      strat_beta * (bm_nv.iloc[-1] / bm_nv.iloc[0] - 1 - risk_free_ret)
+        risk_free_ret = 0.00
+        strat_alpha = strat_ret - risk_free_ret - strat_beta * (bm_ret - risk_free_ret)
 
         if len(bm_chge) > 0:
             # 计算波动率
@@ -743,7 +747,7 @@ class StrategyBaseBacktestStock(object):
             sharp_ratio = 0
 
         # 计算 downside risk 和 sortino ratio
-        strat_downside_chge = strat_chge[strat_chge > risk_free_ret]
+        strat_downside_chge = strat_chge[strat_chge < risk_free_ret]
         if len(strat_downside_chge) > 0:
             downside_risk = std(strat_downside_chge)
             sortino_ratio = (strat_ret - risk_free_ret) / downside_risk
@@ -760,17 +764,35 @@ class StrategyBaseBacktestStock(object):
             tracking_error = 0
             information_ratio = 0
 
-        # 计算最大回撤
-        drawdown = Series(0., index=bm_nv.index)
-        if len(strat_nv) > 0:
-            for ii in strat_nv.index:
-                dd = 1 - strat_nv[ii] / max(strat_nv.loc[:ii].values)
-                drawdown.iloc[ii] = dd
+        # 计算最大回撤（两种方法）
+        strat_nv_df = strat_nv.to_frame()
+        strat_nv_df['highlevel'] = strat_nv_df['total_balance'].rolling(min_periods=1,
+                                                                        window=len(strat_nv_df),
+                                                                        center=False).max()
+        strat_nv_df['drawdown'] = strat_nv_df['total_balance'] / strat_nv_df['highlevel'] - 1
+        drawdown = strat_nv_df['drawdown']
+
+        # drawdown = Series(0., index=bm_nv.index)
+        # if len(strat_nv) > 0:
+        #     for ii, datei in enumerate(strat_nv.index):
+        #         if ii > 0:
+        #             dd = 1 - strat_nv[datei] / max(strat_nv.iloc[:ii].values)
+        #         else:
+        #             dd = 0
+        #         drawdown.iloc[ii] = dd
+
+        total_commssion = 0
+        for ii in self.context.commission_data_dict.keys():
+            cur_dict = self.context.commission_data_dict[ii]
+            if cur_dict:
+                for jj in cur_dict.keys():
+                    total_commssion += cur_dict[jj]
 
         self.performance_indicator['bm_nv_series'] = bm_nv
         self.performance_indicator['strat_nv_series'] = strat_nv
         self.performance_indicator['strat_drawdown_series'] = drawdown
 
+        self.performance_indicator['total commission'] = total_commssion
         self.performance_indicator['bm_ret'] = bm_ret
         self.performance_indicator['strat_ret'] = strat_ret
         self.performance_indicator['bm_annnual_ret_arith'] = bm_annnual_ret_arith
@@ -784,56 +806,53 @@ class StrategyBaseBacktestStock(object):
         self.performance_indicator['tracking_error'] = tracking_error
         self.performance_indicator['information_ratio'] = information_ratio
 
-    def show_results(self, fpath):
+    def show_results(self, output_path):
         """将策略绩效分析结果保存到 html 文件中"""
-        # 结果打印
+        # 结果打印，必须用英文，否则排版有问题
         last_timestamp = list(self.context.account_data_dict)[-1]
-        results = {'开始时间': self.start,
-                   '结束时间': self.end,
-                   '期初资金': self.account[0]['equity'],
-                   '期末资金': round_to(self.context.account_data_dict[last_timestamp][self.account[0]['name']].total_balance, 4),
-                   '基准年化算术回报率': round_to(self.performance_indicator['bm_annnual_ret_arith'], 4),
-                   '策略年化算术回报率': round_to(self.performance_indicator['strat_annual_ret_arith'], 4),
-                   '策略波动率': round_to(self.performance_indicator['strat_vol'], 4),
-                   '策略最大回测率': round_to(self.performance_indicator['strat_drawdown_series'].iloc[-1], 4),
-                   '策略 sharp ratio': round_to(self.performance_indicator['sharp_ratio'], 4),
-                   '策略 downside risk': round_to(self.performance_indicator['downside_risk'], 4),
-                   '策略 sortino ratio': round_to(self.performance_indicator['sortino_ratio'], 4),
-                   '策略 tracking error': round_to(self.performance_indicator['tracking_error'], 4),
-                   '策略 information ratio': round_to(self.performance_indicator['information_ratio'], 4)
+        results = {'Start Date': self.start,
+                   'End Date': self.end,
+                   'Initial Equity': round(self.account[0]['equity'], 2),
+                   'Final Equity': round(
+                       self.context.account_data_dict[last_timestamp][self.account[0]['name']].total_balance, 2),
+                   'total commission': round(self.performance_indicator['total commission'], 4),
+                   'Benchmark Annual Return(arith)': round(self.performance_indicator['bm_annnual_ret_arith'], 4),
+                   'Strategy Annual Return(arith)': round(self.performance_indicator['strat_annual_ret_arith'], 4),
+                   'Strategy Volatility': round(self.performance_indicator['strat_vol'], 4),
+                   'Strategy Max Drawdown %': round(min(self.performance_indicator['strat_drawdown_series']), 4) * 100,
+                   'Sharp Ratio': round(self.performance_indicator['sharp_ratio'], 4),
+                   'Downside Risk': round(self.performance_indicator['downside_risk'], 4),
+                   'Sortino Ratio': round(self.performance_indicator['sortino_ratio'], 4),
+                   'Tracking Error': round(self.performance_indicator['tracking_error'], 4),
+                   'Information Ratio': round(self.performance_indicator['information_ratio'], 4)
                    }
 
         print(dict_to_output_table(results))
 
-        # 展示曲线保存到html
+        # 净值、回撤曲线保存到html
         datetime_index = self.performance_indicator['bm_nv_series'].index.values
 
-        # page = Page("strategy backtesting indicator")
         page = Page()
-        line_net_value = Line("net_asset_value", width=1300, height=400, title_pos="8%")
-        line_net_value.add("benchmark_net_asset_value", datetime_index,
+        line_net_value = Line("净值曲线", width=1300, height=400, title_pos="8%")
+        line_net_value.add("基准的净值曲线", datetime_index,
                            [round(i, 4) for i in self.performance_indicator['bm_nv_series'].values],
-                           tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True)
-        line_net_value.add("strategy_net_asset_value", datetime_index,
+                           tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True, yaxis_min='dataMin')
+        line_net_value.add("策略的净值曲线", datetime_index,
                            [round(i, 4) for i in self.performance_indicator['strat_nv_series'].values],
-                           tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True)
+                           tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True, yaxis_min='dataMin')
         page.add(line_net_value)
 
-        for indicator_name, indicator in self.performance_indicator.items():
-            self.add_to_page(page, indicator, indicator_name, datetime_index)
+        # for indicator_name, indicator in self.performance_indicator.items():
+        self.add_to_page(page, self.performance_indicator['strat_drawdown_series'], '策略的回撤曲线', datetime_index)
 
-        # 生成本地 HTML 文件
         cur_datetime = timestamp_to_datetime(int(time()), '%Y%m%d_%H%M%S')
-        page.render(path=fpath + "strategy_backtest_" + cur_datetime + ".html")
+        page.render(path=output_path + "strategy_backtest_" + cur_datetime + ".html")
 
     def add_to_page(self, page, indicator, indicator_name, datetime_index):
         line = Line(indicator_name, width=1300, height=400, title_pos="8%")
-        try:
-            line.add(indicator_name, datetime_index, indicator,
-                     tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True)
-            page.add(line)
-        except:
-            pass
+        line.add(indicator_name, datetime_index, indicator,
+                 tooltip_tragger="axis", legend_top="3%", is_datazoom_show=True, yaxis_min='dataMin')
+        page.add(line)
 
     def update_position_frozen(self, dt):
         """处理当日情况前，先更新当日股票的持仓冻结数量"""
@@ -847,9 +866,7 @@ class StrategyBaseBacktestStock(object):
                     # 前日所有冻结的资产都释放出来
                     if self.context.bar_account_data_dict[position_data.account].frozen != 0:
                         self.context.bar_account_data_dict[position_data.account].frozen = 0
-                    print('—— * 更新今仓冻结数量 *')
-
-        pass
+                    # print('—— * 更新今仓冻结数量 *')
 
     def delete_position_zero(self):
         """将数量为0的持仓，从持仓字典中删掉"""
@@ -882,11 +899,11 @@ class StrategyBaseBacktestStock(object):
                 account.datetime = dt
                 account.pre_balance = account.total_balance
 
-        print("-- * 以当前bar的close更新账户总体情况")
+        # print("-- * 以当前bar的close更新账户总体情况")
 
     def save_current_bar_data(self, dt: str):
         """记录每根bar的信息，包括资金、持仓、委托、成交等"""
-        print('-- save_current_bar_data() @ {0} 记录每根bar的信息，包括资金、持仓、委托、成交'.format(dt))
+        # print('-- save_current_bar_data() @ {0} 记录每根bar的信息，包括资金、持仓、委托、成交'.format(dt))
         cur_timestamp = datetime_to_timestamp(dt)
         self.context.order_data_dict[cur_timestamp] = self.context.bar_order_data_dict
         self.context.trade_data_dict[cur_timestamp] = self.context.bar_trade_data_dict
@@ -894,44 +911,14 @@ class StrategyBaseBacktestStock(object):
         self.context.commission_data_dict[cur_timestamp] = deepcopy(self.context.bar_commission_data_dict)
         self.context.account_data_dict[cur_timestamp] = deepcopy(self.context.bar_account_data_dict)
 
-    def position_rights(self, dt: str):
-        """将持仓头寸除权除息"""
-        if self.context.bar_order_data_dict:
-            print('-- * 将持仓头寸除权除息 *')
-        pass
-
-    def position_move_warehouse(self, dt: str):
-        """期货持仓头寸移仓"""
-        if self.context.bar_order_data_dict:
-            print('-- * 将持仓头寸换月移仓 *')
-        pass
-
-    def order_rights(self, dt: str):
-        """未成交订单头寸与价格按除权除息折算，买入的话要取整"""
-        if self.context.bar_order_data_dict:
-            print('-- * 将未成交订单除权除息 *')
-
-    def order_move_warehouse(self, dt: str):
-        """期货订单移仓"""
-        if self.context.bar_order_data_dict:
-            print('-- * 将订单中的合约换月移仓 *')
-        pass
-
-    def update_symbol_pool(self, dt: str):
-        print('-- * 合约池更新 *')
-
-    def update_black_list(self, dt: str):
-        print('-- * 黑名单更新 *')
-        self.context.black_name_list = []
-
     def prior_risk_control(self, dt, account, symbol, diretion, offset, price, volume):
         """市场数据触发的交易信号，需要事前风控审核"""
-        print('prior_risk_control @ {0}'.format(dt))
+        # print('prior_risk_control @ {0}'.format(dt))
 
-        # 黑名单审核
+        # 黑名单审核。如果 context 中的黑名单能动态更新，这里就不用更新，直接取值判断就可
         if symbol in self.context.black_name_list:
             self.context.is_pass_risk = False
-            print("Order Stock_code in Black_name_list")
+            # print("Order Stock_code in Black_name_list")
             return False
 
         # 开仓时账户现金要够付持仓保证金，否则撤单
@@ -968,8 +955,41 @@ class StrategyBaseBacktestStock(object):
 
         return True
 
+    def position_rights(self, dt: str):
+        """将持仓头寸除权除息"""
+        # print('-- * 将持仓头寸除权除息 *')
+        if self.context.bar_order_data_dict:
+            pass
+
+    def position_move_warehouse(self, dt: str):
+        """期货持仓头寸移仓"""
+        # print('-- * 将持仓头寸换月移仓 *')
+        if self.context.bar_order_data_dict:
+            pass
+
+    def order_rights(self, dt: str):
+        """股票订单发出之前，头寸与价格按除权除息折算，买入的话要取整"""
+        # print('-- * 将未成交订单除权除息 *')
+        if self.context.bar_order_data_dict:
+            pass
+
+    def order_move_warehouse(self, dt: str):
+        """期货订单发出之前，如果主力合约换月，需要将持仓移仓"""
+        # print('-- * 将订单中的合约换月移仓 *')
+        if self.context.bar_order_data_dict:
+            pass
+
+    def update_symbol_pool(self, dt: str):
+        # print('-- * 合约池更新 *')
+        pass
+
+    def update_black_list(self, dt: str):
+        # print('-- * 黑名单更新 *')
+        self.context.black_name_list = []
+
+    # 以下方法在继承时重写
     @abstractmethod
-    def init_strategy(self):
+    def init_strategy(self, log_name):
         pass
 
     @abstractmethod
@@ -981,5 +1001,5 @@ class StrategyBaseBacktestStock(object):
         pass
 
     @abstractmethod
-    def handle_trade(self):
+    def handle_trade(self, event_trade):
         pass

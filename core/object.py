@@ -35,10 +35,6 @@ class BarData(BaseData):
     amount: float = EMPTY_FLOAT
     bar_index: int = EMPTY_INT
 
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-
 
 class OrderData(BaseData):
     """委托订单类"""
@@ -86,11 +82,6 @@ class OrderData(BaseData):
         self.front_id = EMPTY_STRING        # 前置机编号，实际交易用
         self.session_id = EMPTY_STRING      # 连接编号，实际交易用
 
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.order_id_full = f"{self.gateway}.{self.order_id}"
-
     def is_active(self) -> bool:
         """委托订单还未成交吗？"""
         if self.status in ACTIVE_STATUSES:
@@ -118,11 +109,6 @@ class StopOrder(OrderData):
         self.front_id = EMPTY_STRING  # 前置机编号，实际交易用
         self.session_id = EMPTY_STRING  # 连接编号，实际交易用
 
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.order_id_full = f"{self.gateway}.{self.order_id}"
-
     def is_active(self) -> bool:
         """委托订单还未成交吗？"""
         if self.status in ACTIVE_STATUSES:
@@ -149,19 +135,12 @@ class TradeData(BaseData):
     multiplier: int = EMPTY_INT      # 合约乘数
     price_tick: float = EMPTY_FLOAT   # 最小价格跳动
     margin: float = EMPTY_FLOAT       # 保证金率
-    tax: float = EMPTY_FLOAT          # 印花税率
     slippage: float = EMPTY_FLOAT     # 滑点值
     commission: float = EMPTY_FLOAT   # 手续费率
     comments: str = EMPTY_STRING
     account: str = EMPTY_STRING
     frozen: int = EMPTY_INT
     symbol_type: str = EMPTY_STRING
-
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.order_id_full = f"{self.gateway}.{self.order_id}"
-        self.trade_id_full = f"{self.gateway}.{self.trade_id}"
 
 
 @dataclass
@@ -189,11 +168,6 @@ class PositionData(BaseData):
     price_tick: float = EMPTY_FLOAT   # 最小价格跳动
     margin: float = EMPTY_FLOAT       # 保证金率
     symbol_type: str = EMPTY_STRING
-
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
-        self.position_id_full = f"{self.symbol_full}.{self.direction}"
 
 
 class AccountData(BaseData):
@@ -231,7 +205,3 @@ class ContractData(BaseData):
 
     min_volume: float = 1           # minimum trading order_volume of the contract
     stop_supported: bool = False    # whether server supports stop order
-
-    def __post_init__(self):
-        """"""
-        self.symbol_full = f"{self.symbol}.{self.exchange}"
