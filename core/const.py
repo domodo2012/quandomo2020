@@ -2,111 +2,138 @@
 """
 常用的常量
 """
+from enum import Enum
+
 
 # 策略运行模式
-RunMode_BACKTESTING = "backtesting"
-RunMode_LIVE = "live"
+class RunMode(Enum):
+    BACKTESTING = "backtesting"
+    LIVE = "live"
+
 
 # 市场数据的周期级别/时间间隔
-Interval_MIN = "1m"
-Interval_HOUR = "1h"
-Interval_DAILY = "d"
-Interval_WEEKLY = "w"
+class Interval(Enum):
+    MIN = "1m"
+    HOUR = "1h"
+    DAILY = "d"
+    WEEKLY = "w"
+
 
 # 除复权方式
-RightsAdjustment_NONE = "none"
-RightsAdjustment_FROWARD = "forward"
-RightsAdjustment_BACKWARD = "backward"
+class RightsAdjustment(Enum):
+    NONE = "none"
+    FROWARD = "forward"
+    BACKWARD = "backward"
+
 
 # 事件类别
-EVENT_TIMER = "event_timer"                         # 定时事件
-EVENT_BAR = "event_bar"                             # 市场 bar 数据事件
-EVENT_ORDER = "event_order"                         # 委托订单事件
-EVENT_PORTFOLIO = "event_portfolio"                 # 投资组合层面的风控事件
-EVENT_TRADE = "event_trade"                         # 成交/交易事件
-EVENT_RECORD = "update_bar_info"                    # 数据记录事件
-EVENT_LOG = "event_log"                             # 日志记录事件
-EVENT_ACCOUNT = "event_account"                     # 账户事件
-EVENT_RIGHTS = "event_rights"                       # 股票的分配送转事件
-EVENT_DELIVERY = "event_delivery"                   # 期货交割事件
-EVENT_STRATEGY = "event_strategy"                   # 组合管理器对所管策略的调整事件
-EVENT_POOL = "event_pool"                           # 股票池更新事件
-EVENT_BLACK_LIST = "event_black_list"               # 黑名单更新事件
+class Event(Enum):
+    TIMER = "event_timer"                         # 定时事件
+    BAR = "event_bar"                             # 市场 bar 数据事件
+    ORDER = "event_order"                         # 委托订单事件
+    PORTFOLIO = "event_portfolio"                 # 投资组合层面的风控事件
+    TRADE = "event_trade"                         # 成交/交易事件
+    RECORD = "update_bar_info"                    # 数据记录事件
+    LOG = "event_log"                             # 日志记录事件
+    ACCOUNT = "event_account"                     # 账户事件
+    RIGHTS = "event_rights"                       # 股票的分配送转事件
+    DELIVERY = "event_delivery"                   # 期货交割事件
+    STRATEGY = "event_strategy"                   # 组合管理器对所管策略的调整事件
+    POOL = "event_pool"                           # 股票池更新事件
+    BLACK_LIST = "event_black_list"               # 黑名单更新事件
 
-Record_ORDER_DATA = "order_data"
-Record_TRADE_DATA = "trade_data"
-Record_POSITION_DATA = "position_data"
-Record_ACCOUNT_DATA = "account_data"
 
 # 零值
-EMPTY_STRING = ""
-EMPTY_INT = 0
-EMPTY_FLOAT = 0.0
+class Empty(Enum):
+    eSTRING = ""
+    eINT = 0
+    eFLOAT = 0.0
+
 
 # 订单/交易/持仓的方向
-Direction_LONG = "long"       # 做多
-Direction_SHORT = "short"     # 做空
+class Direction(Enum):
+    LONG = "long"       # 做多
+    SHORT = "short"     # 做空
+
 
 # 开平仓状态
-Offset_OPEN = "open"
-Offset_CLOSE = "close"
-Offset_CLOSETODAY = "close_today"  # 平今
-Offset_CLOSEYESTERDAY = "close_yesterday"  # 平昨
+class Offset(Enum):
+    OPEN = "open"
+    CLOSE = "close"
+    CLOSETODAY = "close_today"  # 平今
+    CLOSEYESTERDAY = "close_yesterday"  # 平昨
+
 
 # 委托单状态
-Status_SUBMITTING = "submitting"           # 待提交
-Status_WITHDRAW = "withdraw"               # 已撤销
-Status_NOT_TRADED = "pending"              # 未成交
-Status_PART_TRADED = "partial filled"      # 部分成交
-Status_ALL_TRADED = "filled"               # 全部成交
-Status_CANCELLED = "cancelled"             # 已取消
-Status_REJECTED = "rejected"               # 已拒绝
-Status_UNKNOWN = "unknown"                 # 未知
+class Status(Enum):
+    SUBMITTING = "submitting"           # 待提交
+    WITHDRAW = "withdraw"               # 已撤销
+    NOT_TRADED = "pending"              # 未成交
+    PART_TRADED = "partial filled"      # 部分成交
+    ALL_TRADED = "filled"               # 全部成交
+    CANCELLED = "cancelled"             # 已取消
+    REJECTED = "rejected"               # 已拒绝
+    UNKNOWN = "unknown"                 # 未知
+
 
 # 委托单类型
-OrderType_LIMIT = "limit"         # 限价单
-OrderType_MARKET = "market"       # 市价单
-OrderType_STOP = "stop"           # 止损单
-OrderType_FAK = "FAK"             # 立即成交，剩余的自动撤销的限价单
-OrderType_FOK = "FOK"             # 立即全部成交否则自动撤销的限价单
+class OrderType(Enum):
+    LIMIT = "limit"         # 限价单
+    MARKET = "market"       # 市价单
+    STOP = "stop"           # 止损单
+    FAK = "FAK"             # 立即成交，剩余的自动撤销的限价单
+    FOK = "FOK"             # 立即全部成交否则自动撤销的限价单
+
 
 # 止损单状态
-StopOrderStatus_WAITING = "等待中"
-StopOrderStatus_CANCELLED = "已撤销"
-StopOrderStatus_TRIGGERED = "已触发"
+class StopOrderStatus(Enum):
+    WAITING = "等待中"
+    CANCELLED = "已撤销"
+    TRIGGERED = "已触发"
+
 
 # 滑点类型
-SLIPPAGE_FIX = "slippage_fix"           # 固定值滑点
-SLIPPAGE_PERCENT = "slippage_percent"   # 比例值滑点
+class Slippage(Enum):
+    FIX = "slippage_fix"           # 固定值滑点
+    PERCENT = "slippage_percent"   # 比例值滑点
+
 
 # 交易所
-Exchange_CFFEX = "CFFEX"         # China Financial Futures Exchange
-Exchange_SHFE = "SHFE"           # Shanghai Futures Exchange
-Exchange_CZCE = "CZCE"           # Zhengzhou Commodity Exchange
-Exchange_DCE = "DCE"             # Dalian Commodity Exchange
-Exchange_INE = "INE"             # Shanghai International Energy Exchange
-Exchange_SSE = "SSE"             # Shanghai Stock Exchange
-Exchange_SZSE = "SZSE"           # Shenzhen Stock Exchange
-Exchange_SGE = "SGE"             # Shanghai Gold Exchange
+class Exchange(Enum):
+    CFFEX = "CFFEX"         # China Financial Futures Exchange
+    SHFE = "SHFE"           # Shanghai Futures Exchange
+    CZCE = "CZCE"           # Zhengzhou Commodity Exchange
+    DCE = "DCE"             # Dalian Commodity Exchange
+    INE = "INE"             # Shanghai International Energy Exchange
+    SSE = "SSE"             # Shanghai Stock Exchange
+    SZSE = "SZSE"           # Shenzhen Stock Exchange
+    SGE = "SGE"             # Shanghai Gold Exchange
+
 
 # 产品类别
-Product_STOCK = "stock"         # 股票
-Product_STOCK_SH = "stock_sh"         # 上海股票
-Product_STOCK_SZ = "stock_sz"         # 深圳股票
-Product_FUTURES = "futures"     # 期货
-Product_INDEX = "index"         # 指数
-
-# 数据库名
-MongoDbName_MARKET_DATA_DAILY = "market_data_daily"
-MongoDbName_FINANCIAL_DATA = "financial_data"
-MongoDbName_MARKET_DATA_1_MIN = "market_data_1min"
-MongoDbName_DAILY_DB_NAME = 'market_data_daily'
-MongoDbName_MINUTE_DB_NAME = 'Min_Db'
+class Product(Enum):
+    STOCK = "stock"         # 股票
+    STOCK_SH = "stock_sh"         # 上海股票
+    STOCK_SZ = "stock_sz"         # 深圳股票
+    FUTURES = "futures"     # 期货
+    INDEX = "index"         # 指数
 
 
-DATABASE_SQLITE_BASE = "base_data.db"
-DATABASE_SQLITE_MARKET = "market_data.db"
-DATABASE_SQLITE_FACTOR = "factor_data.db"
+# mongodb 数据库名
+class MongoDbName(Enum):
+    MARKET_DATA_DAILY = "market_data_daily"
+    FINANCIAL_DATA = "financial_data"
+    MARKET_DATA_1_MIN = "market_data_1min"
+    DAILY_DB_NAME = 'market_data_daily'
+    MINUTE_DB_NAME = 'Min_Db'
+
+
+# sqlite 数据库名
+class SqliteDbName(Enum):
+    DB = "quandomo_data.db"
+    BASE = "base_data.db"
+    MARKET = "market_data.db"
+    FACTOR = "factor_data.db"
 
 
 Futures_contracts = {

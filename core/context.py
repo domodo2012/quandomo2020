@@ -45,6 +45,7 @@ class Context(object):
         self.daily_data = pd.DataFrame()
         self.index_daily_data = pd.DataFrame()
         self.benchmark_index = []
+        self.ex_rights_dict = None
 
         # 风控
         self.black_name_list = None

@@ -8,6 +8,8 @@ from pandas import read_table
 from const import *
 
 unique_keys = {
+    'AINDEXEODPRICES': 'S_INFO_WINDCODE,TRADE_DT',
+    'ASHAREEODPRICES': 'S_INFO_WINDCODE,TRADE_DT',
     'AINDEXMEMBERS': 'S_INFO_WINDCODE,S_CON_INDATE',
     'AShareBalanceSheet': 'S_INFO_WINDCODE,REPORT_PERIOD',
     'ASHARECALENDAR': 'TRADE_DAYS,S_INFO_EXCHMARKET',
@@ -91,13 +93,15 @@ def data_to_sqlite(root_path, sub_path, db_name):
 
 if __name__ == '__main__':
     root_path = "D:/python projects/quandomo/data_center/data/"
-    db_name_list = [DATABASE_SQLITE_MARKET,
-                    DATABASE_SQLITE_BASE,
-                    DATABASE_SQLITE_FACTOR]
-    sub_path = ['market/',
-                'basic/',
+    # db_name_list = [SqliteDbName.MARKET,
+    #                 SqliteDbName.BASE,
+    #                 SqliteDbName.FACTOR]
+    db_name_list = [SqliteDbName.DB.value]
+    # sub_path = ['market/',
+    sub_path = [
+                'base/',
                 'factor/']
 
     # 数据写入 sqlite 中
-    for ii in range(len(db_name_list)):
-        data_to_sqlite(root_path, sub_path[ii], db_name_list[ii])
+    for ii in range(len(sub_path)):
+        data_to_sqlite(root_path, sub_path[ii], db_name_list[0])

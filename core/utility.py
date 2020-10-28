@@ -38,9 +38,14 @@ class ColorLogger(object):
         }
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
+        # self.formatter = colorlog.ColoredFormatter(
+        #     '%(log_color)s[%(asctime)s] '
+        #     '[%(filename)s:%(lineno)d] '
+        #     '[%(module)s:%(funcName)s] '
+        #     '[%(levelname)s]- %(message)s',
+        #     log_colors=self.log_colors_config)  # 日志输出格式
         self.formatter = colorlog.ColoredFormatter(
             '%(log_color)s[%(asctime)s] '
-            '[%(filename)s:%(lineno)d] '
             '[%(module)s:%(funcName)s] '
             '[%(levelname)s]- %(message)s',
             log_colors=self.log_colors_config)  # 日志输出格式
@@ -72,6 +77,7 @@ class ColorLogger(object):
             self.logger.warning(message)
         elif level == 'error':
             self.logger.error(message)
+
         # 这两行代码是为了避免日志输出重复问题
         self.logger.removeHandler(ch)
         self.logger.removeHandler(fh)
@@ -818,9 +824,9 @@ def get_symbol_params(symbol_code: str) -> Dict:
 def get_exchange(symbol):
     sec_code, exchge_code = symbol.split('.')
     if exchge_code.upper() == 'SH':
-        exchange = Exchange_SSE
+        exchange = Exchange.SSE
     elif exchge_code.upper() == 'SZ':
-        exchange = Exchange_SZSE
+        exchange = Exchange.SZSE
     else:
         exchange = exchge_code
     return exchange
