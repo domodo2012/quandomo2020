@@ -46,7 +46,6 @@ class ColorLogger(object):
         #     log_colors=self.log_colors_config)  # 日志输出格式
         self.formatter = colorlog.ColoredFormatter(
             '%(log_color)s[%(asctime)s] '
-            '[%(module)s:%(funcName)s] '
             '[%(levelname)s]- %(message)s',
             log_colors=self.log_colors_config)  # 日志输出格式
 
@@ -115,7 +114,7 @@ class Logger(object):
         cur_datetime = time.strftime("%Y-%m-%d_%H%M%S", time.localtime())
         file_name = '{0}log_{1}.csv'.format(logger_dir, cur_datetime)
         logging.basicConfig(level=level_dict[set_level],
-                            format='%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s',
+                            format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S',
                             filename=file_name,
                             filemode=filemode)

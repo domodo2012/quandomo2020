@@ -155,10 +155,10 @@ class StrategyBase(object):
         pass
 
     def cross_limit_order(self):
-        print("run cross_limit_order() method")
+        print("run deal_limit_order() method")
 
     def cross_stop_order(self):
-        print("run cross_stop_order() method")
+        print("run deal_stop_order() method")
 
     def new_bar(self, bar: BarData):
         """"""

@@ -9,7 +9,7 @@ from core.object import OrderData
 from core.utility import timestamp_to_datetime, date_str_to_int, Timer
 # from engine.strategy_base import StrategyBase, Trade
 from trials.event_drive_trial import StrategyBase
-from data_center.get_data import GetData
+from data_center.get_data import GetMongoData
 
 
 # 继承strategy基类
@@ -23,17 +23,17 @@ class TrialStrategy(StrategyBase):
         self.account = {"acc0": 1000000, "acc1": 1000}     # 设置回测资金账号及初始资金量
         self.benchmark = "000300.SH"        # 设置回测基准
         self.rights_adjustment = RightsAdjustment_NONE    # 设置复权方式
-        self.get_data = GetData()
+        self.get_data = GetMongoData()
 
         # 设置股票池
         self.universe = ['000001.SZ', '000002.SZ', '600000.SH', '600001.SH']
-        # print(self.universe)
+        # self.context.logger.info(self.universe)
 
         # 回测滑点设置
         self.set_slippage_type = 'FIX'
 
     def handle_bar(self, bar):
-        print("\n遇到 EventMarket 类事件，回调函数 MaStrategy.handle_bar 按最新市场数据计算一次")
+        self.context.logger.info("\n遇到 EventMarket 类事件，回调函数 MaStrategy.handle_bar 按最新市场数据计算一次")
 
         # 取当前bar的持仓情况
         available_position_dict = {}

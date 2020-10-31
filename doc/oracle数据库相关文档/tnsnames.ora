@@ -1,0 +1,49 @@
+
+# ORCL =
+#  (DESCRIPTION =
+#    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.100.2)(PORT = 1521))
+#    (CONNECT_DATA =
+#      (SERVER = DEDICATED)
+#      (SERVICE_NAME = orcl)
+#    )
+#  )
+
+
+winddb =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 172.30.51.106)(PORT = 11521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = winddb)
+    )
+  )
+ 
+
+winddata = 
+   (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 180.168.158.66)(PORT = 5546))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SID = winddata)
+    )
+  )
+
+
+EMBASERACPDG06 =
+	(DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 183.136.162.164)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = EMBASE)
+    )
+  )
+  
+ORCL =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = orcl)
+    )
+  )
+# √‹¬Î « myorcl2020

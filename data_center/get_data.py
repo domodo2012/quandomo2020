@@ -187,49 +187,49 @@ class GetSqliteData(GetDBData, ABC):
         cur = self.conn.execute(get_data_sql)
         data = cur.fetchall()
 
-        # ssym = ''
-        # data_dict = {}
-        # cur_dict = {}
-        # for datal in data:
-        #     if ssym != datal[0]:
-        #         if ssym not in data_dict.keys():
-        #             data_dict[datal[0]] = {}
-        #         else:
-        #             data_dict[ssym] = cur_dict
-        #             data_dict[datal[0]] = {}
-        #             cur_dict = {}
-        #         ssym = datal[0]
-        #
-        #         cur_dict[datal[1]] = {
-        #             'CASH_DIVIDEND_RATIO': datal[2],
-        #             'BONUS_SHARE_RATIO': datal[3],
-        #             'RIGHTSISSUE_RATIO': datal[4],
-        #             'RIGHTSISSUE_PRICE': datal[5],
-        #             'CONVERSED_RATIO': datal[6]
-        #         }
-        #     else:
-        #         cur_dict[datal[1]] = {
-        #             'CASH_DIVIDEND_RATIO': datal[2],
-        #             'BONUS_SHARE_RATIO': datal[3],
-        #             'RIGHTSISSUE_RATIO': datal[4],
-        #             'RIGHTSISSUE_PRICE': datal[5],
-        #             'CONVERSED_RATIO': datal[6]
-        #         }
-
-        data_df = pd.DataFrame(data, columns=fields)
-        data_df = data_df.fillna(0)
+        ssym = ''
         data_dict = {}
-        for name, group in data_df.groupby('S_INFO_WINDCODE'):
-            v_dict = {}
-            for vv in group.values:
-                v_dict[vv[1]] = {
-                        'CASH_DIVIDEND_RATIO': vv[2],
-                        'BONUS_SHARE_RATIO': vv[3],
-                        'RIGHTSISSUE_RATIO': vv[4],
-                        'RIGHTSISSUE_PRICE': vv[5],
-                        'CONVERSED_RATIO': vv[6]
+        cur_dict = {}
+        for datal in data:
+            if ssym != datal[0]:
+                if ssym not in data_dict.keys():
+                    data_dict[datal[0]] = {}
+                else:
+                    data_dict[ssym] = cur_dict
+                    data_dict[datal[0]] = {}
+                    cur_dict = {}
+                ssym = datal[0]
+
+                cur_dict[datal[1]] = {
+                    'CASH_DIVIDEND_RATIO': datal[2],
+                    'BONUS_SHARE_RATIO': datal[3],
+                    'RIGHTSISSUE_RATIO': datal[4],
+                    'RIGHTSISSUE_PRICE': datal[5],
+                    'CONVERSED_RATIO': datal[6]
                 }
-            data_dict[name] = v_dict
+            else:
+                cur_dict[datal[1]] = {
+                    'CASH_DIVIDEND_RATIO': datal[2],
+                    'BONUS_SHARE_RATIO': datal[3],
+                    'RIGHTSISSUE_RATIO': datal[4],
+                    'RIGHTSISSUE_PRICE': datal[5],
+                    'CONVERSED_RATIO': datal[6]
+                }
+
+        # data_df = pd.DataFrame(data, columns=fields)
+        # data_df = data_df.fillna(0)
+        # data_dict = {}
+        # for name, group in data_df.groupby('S_INFO_WINDCODE'):
+        #     v_dict = {}
+        #     for vv in group.values:
+        #         v_dict[vv[1]] = {
+        #                 'CASH_DIVIDEND_RATIO': vv[2],
+        #                 'BONUS_SHARE_RATIO': vv[3],
+        #                 'RIGHTSISSUE_RATIO': vv[4],
+        #                 'RIGHTSISSUE_PRICE': vv[5],
+        #                 'CONVERSED_RATIO': vv[6]
+        #         }
+        #     data_dict[name] = v_dict
         return data_dict
 
 

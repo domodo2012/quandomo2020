@@ -21,7 +21,7 @@ from core.utility import (
 from core.object import OrderData, StopOrder, TradeData
 from core.context import Context
 from engine.event_manager import EventManager
-from data_center.get_data import GetData
+from data_center.get_data import GetMongoData
 
 
 class StrategyBase(object):
@@ -37,7 +37,7 @@ class StrategyBase(object):
         self.universe = None
         self.set_slippage_type = None
 
-        self.get_data = GetData()  # 从 mongodb 取数据
+        self.get_data = GetMongoData()  # 从 mongodb 取数据
         self.timestamp = None
         self.datetime = None
         self.bar_index = None
@@ -129,7 +129,7 @@ class StrategyBase(object):
                         # todo: live模式下，市场数据通过api订阅后推送过来
                         pass
                 except BacktestFinished:
-                    print('策略运行完成')
+                    self.context.logger.info('策略运行完成')
                     self.strategy_analysis()
                     self.show_results()
                     break
@@ -139,7 +139,7 @@ class StrategyBase(object):
 
     def cross_limit_order(self, event_market, cur_mkt_data):
         """处理未成交限价单"""
-        print("-- this is cross_limit_order() @ {0}".format(event_market.dt))
+        print("-- this is deal_limit_order() @ {0}".format(event_market.dt))
 
         # 逐个未成交委托进行判断
         for order in list(self.context.active_limit_orders.values()):
@@ -209,7 +209,7 @@ class StrategyBase(object):
 
     def cross_stop_order(self, event_market, cur_mkt_data):
         """处理未成交止损单"""
-        print("-- this is cross_stop_order() @ {0}.".format(event_market.dt))
+        print("-- this is deal_stop_order() @ {0}.".format(event_market.dt))
 
         # 逐个未成交委托进行判断
         for stop_order in list(self.context.active_stop_orders.values()):

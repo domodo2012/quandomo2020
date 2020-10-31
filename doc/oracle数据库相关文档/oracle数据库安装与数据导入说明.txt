@@ -1,0 +1,64 @@
+﻿oracle数据库安装与数据导入说明
+
+1、将两个压缩文件解压到同一个文件夹，运行里边的setup.exe文件安装。
+
+2、安装时选择：
+1）服务器版，高级安装。高级安装的选项基本不用改动，以下除外；
+2）记录下安装目录（此处假设为 D:\APP ）、sid（此处假设为 orcl3）；
+3）12/20 指定配置选项中，字符集采用 简体中文 ZHS16GBK。
+
+3、将以下变量加入环境变量中：
+ORACLE_HOME = D:\app\Administrator\product\11.2.0\dbhome_1
+ORACLE_SID = orcl3
+
+4、默认的数据库大小为32G（单个数据文件的最大值），实际使用的大小远超过默认大小，因此要增加数据库文件，使得数据库大小符合要求。
+目前数据文件的默认位置是在 D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS01.DBF
+1）在 cmd 中输入 sqlplus system/oracle，成功进入后，执行以下指令：
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS02.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS03.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS04.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS05.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS06.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS07.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS08.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS09.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+alter tablespace USERS add datafile 'D:\APP\ADMINISTRATOR\ORADATA\ORCL3\USERS10.DBF' size 1G autoextend on next 100M MAXSIZE unlimited;
+
+2）原数据库中的名称是cxb1（数据库查询时的前缀），在这里需要同名才能导入，因此新建用户名并赋权。
+用户名为 cxb1 密码为 oracle，以后可以用这个用户名登录数据库取数据。
+
+create user cxb1 identified by "oracle";
+grant resource to cxb1;
+grant connect to cxb1;
+
+3）退出到 cmd 输入以下指令导入数据
+(假设数据文件名是
+D:\oracle_setup\CXB1_01.DMP
+D:\oracle_setup\CXB1_02.DMP)
+sql >create directory dir1 as 'D:\oracle_setup';
+
+c:\>impdp system/orcl3 dumpfile=CXB1_%U.DMP directory=dir1 parallel=4 job_name=impdp1 
+
+如果报错，就用：
+grant create any sequence to cxb1;  
+grant create any table to cxb1;  
+grant delete any table to cxb1;  
+grant insert any table to cxb1;  
+grant select any table to cxb1;  
+grant unlimited tablespace to cxb1;  
+grant execute any procedure to cxb1;  
+grant update any table to cxb1;  
+grant create any view to cxb1;
+grant imp_full_database to cxb1;
+
+imp system/system账号的密码 file=D:\oracle_setup\cxb1_%U.dmp full=y ignore=y
+
+备注：
+导入过程中，有可能会报以下错误，都对数据导入没有影响，忽略即可：
+IMP-00015: 由于对象已存在, 下列语句失败:
+
+IMP-00003: 遇到 ORACLE 错误 1917
+ORA-01917: 用户或角色 'CXB1READ' 不存在
+
+5、如果想删掉数据库，进入 D:\app\Administrator\product\11.2.0\dbhome_1\deinstall 
+在 dos 提示符下运行 deinstall.bat 按提示操作即可删除此数据库。
