@@ -128,6 +128,7 @@ class TradeData(BaseData):
     # 成交相关
     direction: str = None                 # 交易方向
     offset: str = None               # 成交开平
+    order_price: float = Empty.eFLOAT.value  # 委托价格
     price: float = Empty.eFLOAT.value        # 成交价格
     volume: float = Empty.eFLOAT.value       # 成交数量
     datetime: datetime = None                   # 成交时间
@@ -179,6 +180,7 @@ class AccountData(BaseData):
     datetime = None
     pre_balance: float = Empty.eFLOAT.value      # 昨日账户总资产
     total_balance: float = Empty.eFLOAT.value    # 今日账户总资产
-    frozen: float = Empty.eFLOAT.value           # 冻结资产
+    holding: float = Empty.eFLOAT.value          # 今日账户总持仓
+    frozen: float = Empty.eFLOAT.value           # 今日账户总冻结资产（持仓中冻结的部分）
     gateway: str = Empty.eSTRING.value
-    available: float = Empty.eFLOAT.value       # 可用资金
+    available: float = Empty.eFLOAT.value        # 今日可用资金

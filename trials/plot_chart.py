@@ -34,7 +34,7 @@ class KeyWraper(QWidget):
     # 初始化
     # ----------------------------------------------------------------------
     def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
+        super().__init__(parent)
         self.setMouseTracking(True)
 
     # 重载方法keyPressEvent(self,event),即按键按下事件方法
@@ -839,6 +839,11 @@ class KLineWidget(KeyWraper):
         self.listLow = list(datas['low'])
         self.listOpenInterest = list(datas['openInterest'])
         self.listSig = [0] * (len(self.datas) - 1) if sigs is None else sigs
+        self.listSig[-123] = 10
+        self.listSig[-83] = -10
+        self.listSig[-23] = 10
+        self.listSig[-3] = -10
+
         # 成交量颜色和涨跌同步，K线方向由涨跌决定
         datas0 = pd.DataFrame()
         datas0['open'] = datas.apply(lambda x: 0 if x['close'] >= x['open'] else x['volume'], axis=1)
@@ -1146,7 +1151,7 @@ class Crosshair(QtCore.QObject):
 ########################################################################
 # 数据支持
 ########################################################################
-class GetData():
+class GetData(object):
     def __init__(self, *arg):
         pass
 
@@ -1181,11 +1186,11 @@ class GetData():
 # 功能测试
 ########################################################################
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ui = KLineWidget()
-    ui.show()
-    data = GetData()
-    ui.setCrosshairInfo('贵州茅台', '30')
-    ui.loadData(data.getData('600519.SH', '30'))
-    ui.refreshAll()
-    app.exec_()
+    app = QApplication(sys.argv)        # 创建 QApplication 类的实例
+    ui = KLineWidget()      # 创建 K 线窗口实例
+    ui.show()               # 显示刚才创建的K线窗口实例
+    data = GetData()        # 创建取数据实例
+    ui.setCrosshairInfo('贵州茅台', '30')   # 设定显示文字
+    ui.loadData(data.getData('600519.SH', '30'))    # 取数据
+    ui.refreshAll()     # 刷新重画
+    sys.exit(app.exec_())    # 循环显示 QApplication 实例，视觉上就是一直显示在桌面上

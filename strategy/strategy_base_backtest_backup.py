@@ -168,7 +168,7 @@ class StrategyBaseBacktestStock(object):
             # 只处理有市场数据的(停牌则当日数据为 -1)
             cur_open = self.get_data.get_market_data(self.context.daily_data,
                                                      all_symbol_code=[order.symbol],
-                                                     field=["open"],
+                                                     field=["close"],
                                                      start=event_bar.dt,
                                                      end=event_bar.dt)
             if isna(cur_mkt_data['open'][order.symbol]) or cur_open < 0:
@@ -192,28 +192,15 @@ class StrategyBaseBacktestStock(object):
                            )
 
             if long_cross or short_cross:
-                symbol_type_short = order.symbol_type.value.split('_')[0]
-
-                # 成交价格算上滑点的影响
                 if long_cross:
                     trade_price = min(order.price, long_best_price)
-
-                    if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
-                        trade_price += self.context.slippage_dict[symbol_type_short]["value"]
-                    elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
-                        trade_price *= (1 + self.context.slippage_dict[symbol_type_short]["value"])
-
                 else:
                     trade_price = max(order.price, short_best_price)
-                    if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
-                        trade_price -= self.context.slippage_dict[symbol_type_short]["value"]
-                    elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
-                        trade_price *= (1 - self.context.slippage_dict[symbol_type_short]["value"])
 
                 # 委托单被成交了，相应的属性变更
                 order.filled_volume = order.order_volume
                 order.filled_datetime = event_bar.dt
-                order.filled_price = round(trade_price, 2)
+                order.filled_price = trade_price
                 order.status = Status.ALL_TRADED
                 # self.context.limit_orders[order.order_id].status = Status.ALL_TRADED
 
@@ -240,7 +227,6 @@ class StrategyBaseBacktestStock(object):
                                   trade_id=generate_random_id('filled'),
                                   direction=order.direction,
                                   offset=order.offset,
-                                  order_price=order.price,
                                   price=order.filled_price,
                                   volume=order.filled_volume,
                                   datetime=order.filled_datetime,
@@ -294,28 +280,9 @@ class StrategyBaseBacktestStock(object):
 
                 # 新追单成交，相关状态更新
                 order_new.status = Status.ALL_TRADED
+                order_new.filled_price = cur_mkt_data['open'][order.symbol]
                 order_new.filled_volume = order_new.order_volume
                 order_new.filled_datetime = event_bar.dt
-
-                # 成交价格算上滑点的影响
-                long_cross = ((order_new.direction == Direction.LONG and order_new.offset == Offset.OPEN)
-                              or (order_new.direction == Direction.SHORT and order_new.offset == Offset.CLOSE))
-                short_cross = ((order_new.direction == Direction.SHORT and order_new.offset == Offset.OPEN)
-                               or (order_new.direction == Direction.LONG and order_new.offset == Offset.CLOSE))
-                symbol_type_short = order_new.symbol_type.value.split('_')[0]
-                trade_price = cur_mkt_data['open'][order.symbol]
-                if long_cross:
-                    if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
-                        trade_price += self.context.slippage_dict[symbol_type_short]["value"]
-                    elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
-                        trade_price *= (1 + self.context.slippage_dict[symbol_type_short]["value"])
-                elif short_cross:
-                    trade_price = max(order.price, short_best_price)
-                    if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
-                        trade_price -= self.context.slippage_dict[symbol_type_short]["value"]
-                    elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
-                        trade_price *= (1 - self.context.slippage_dict[symbol_type_short]["value"])
-                order_new.filled_price = round(trade_price, 2)
 
                 event_order = MakeEvent(Event.ORDER, event_bar.dt, order_new)
                 self.handle_order(event_order)
@@ -327,7 +294,6 @@ class StrategyBaseBacktestStock(object):
                                   trade_id=generate_random_id('filled'),
                                   direction=order_new.direction,
                                   offset=order_new.offset,
-                                  order_price=order_new.price,
                                   price=order_new.filled_price,
                                   volume=order_new.filled_volume,
                                   datetime=order_new.filled_datetime,
@@ -537,33 +503,32 @@ class StrategyBaseBacktestStock(object):
         self.context.current_trade_data = deepcopy(event_trade.data)
 
         # 计算滑点成交价位
-        # if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
-        #     if self.context.current_trade_data.offset == Offset.OPEN:
-        #         if self.context.current_trade_data.direction == Direction.LONG:
-        #             self.context.current_trade_data.price += \
-        #                 self.context.slippage_dict[symbol_type_short]["value"]
-        #         elif self.context.current_trade_data.direction == Direction.SHORT:
-        #             self.context.current_trade_data.price -= \
-        #                 self.context.slippage_dict[symbol_type_short]["value"]
-        #
-        #     elif self.context.current_trade_data.offset == Offset.CLOSE:
-        #         if self.context.current_trade_data.direction == Direction.LONG:
-        #             self.context.current_trade_data.price -= \
-        #                 self.context.slippage_dict[symbol_type_short]["value"]
-        #         elif self.context.current_trade_data.direction == Direction.SHORT:
-        #             self.context.current_trade_data.price += \
-        #                 self.context.slippage_dict[symbol_type_short]["value"]
-        #
-        # elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
-        #     if self.context.current_trade_data.offset == Offset.OPEN:
-        #         self.context.current_trade_data.price *= (
-        #                 1 + self.context.slippage_dict[symbol_type_short]["value"])
-        #
-        #     elif self.context.current_trade_data.offset == Offset.CLOSE:
-        #         self.context.current_trade_data.price *= (
-        #                 1 - self.context.slippage_dict[symbol_type_short]["value"])
-        cur_slippage = \
-            round(abs(self.context.current_trade_data.order_price - self.context.current_trade_data.price), 4)
+        if self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.FIX:
+            if self.context.current_trade_data.offset == Offset.OPEN:
+                if self.context.current_trade_data.direction == Direction.LONG:
+                    self.context.current_trade_data.price += \
+                        self.context.slippage_dict[symbol_type_short]["value"]
+                elif self.context.current_trade_data.direction == Direction.SHORT:
+                    self.context.current_trade_data.price -= \
+                        self.context.slippage_dict[symbol_type_short]["value"]
+
+            elif self.context.current_trade_data.offset == Offset.CLOSE:
+                if self.context.current_trade_data.direction == Direction.LONG:
+                    self.context.current_trade_data.price -= \
+                        self.context.slippage_dict[symbol_type_short]["value"]
+                elif self.context.current_trade_data.direction == Direction.SHORT:
+                    self.context.current_trade_data.price += \
+                        self.context.slippage_dict[symbol_type_short]["value"]
+
+        elif self.context.slippage_dict[symbol_type_short]["slippage_type"] == Slippage.PERCENT:
+            if self.context.current_trade_data.offset == Offset.OPEN:
+                self.context.current_trade_data.price *= (
+                        1 + self.context.slippage_dict[symbol_type_short]["value"])
+
+            elif self.context.current_trade_data.offset == Offset.CLOSE:
+                self.context.current_trade_data.price *= (
+                        1 - self.context.slippage_dict[symbol_type_short]["value"])
+        cur_slippage = self.context.current_trade_data.price - self.context.current_trade_data.price
 
         # 分市场标的计算手续费率
         commission = self.context.commission_dict[cur_symbol_type]
@@ -588,7 +553,7 @@ class StrategyBaseBacktestStock(object):
             #     trade_balance += cur_commission
         self.context.current_commission_data = cur_commission
 
-        # 成交对象的信息补充、更新
+        # 成交对象的信息更新
         symbol_params = get_symbol_params(cur_symbol)
         self.context.current_trade_data.price = trade_balance / self.context.current_trade_data.volume
         self.context.current_trade_data.commission = cur_commission
@@ -614,7 +579,6 @@ class StrategyBaseBacktestStock(object):
         self.context.current_position_data.offset = event_trade.data.offset
         self.context.current_position_data.init_volume = event_trade.data.volume
         self.context.current_position_data.volume = event_trade.data.volume
-        self.context.current_position_data.yd_volume = event_trade.data.volume
         self.context.current_position_data.frozen = event_trade.data.frozen
         self.context.current_position_data.init_price = event_trade.data.price
         self.context.current_position_data.price = event_trade.data.price
@@ -635,7 +599,6 @@ class StrategyBaseBacktestStock(object):
                 cur_pos = self.context.bar_position_data_dict[cur_symbol]
                 position_cost_balance = cur_pos.init_volume * cur_pos.init_price
                 trade_balance = self.context.current_trade_data.volume * self.context.current_trade_data.price
-                cur_pos.yd_volume = cur_pos.volume
 
                 if event_trade.data.offset == Offset.OPEN:
                     total_position = cur_pos.volume + self.context.current_trade_data.volume
@@ -670,17 +633,11 @@ class StrategyBaseBacktestStock(object):
 
         # 更新现金与冻结资金(记得减去手续费)
         if self.context.bar_account_data_dict:
-            if self.context.current_trade_data.offset == Offset.OPEN and \
-                    self.context.current_trade_data.direction == Direction.LONG:
-                # 做多开仓时
+            if self.context.current_trade_data.offset == Offset.OPEN:
                 # 更新可用资金(减少)
                 self.context.bar_account_data_dict[event_trade.data.account].available -= \
                     self.context.current_trade_data.price * self.context.current_trade_data.volume + \
                     self.context.current_trade_data.commission
-
-                # 更新持仓（增加）
-                self.context.bar_account_data_dict[event_trade.data.account].holding += \
-                    self.context.current_trade_data.price * self.context.current_trade_data.volume
 
                 # 更新冻结的资产（增加）
                 self.context.bar_account_data_dict[event_trade.data.account].frozen += \
@@ -689,38 +646,20 @@ class StrategyBaseBacktestStock(object):
                 # 更新账户总权益
                 self.context.bar_account_data_dict[event_trade.data.account].total_balance = \
                     self.context.bar_account_data_dict[event_trade.data.account].available + \
-                    self.context.bar_account_data_dict[event_trade.data.account].holding
-
-            elif self.context.current_trade_data.offset == Offset.CLOSE and \
-                    self.context.current_trade_data.direction == Direction.LONG:
-                # 做多平仓时
+                    self.context.bar_account_data_dict[event_trade.data.account].frozen
+            elif self.context.current_trade_data.offset == Offset.CLOSE:
                 # 更新可用资金（增加）
                 self.context.bar_account_data_dict[event_trade.data.account].available += \
                     self.context.current_trade_data.price * self.context.current_trade_data.volume - \
                     self.context.current_trade_data.commission
 
-                # 更新持仓（减少）
-                self.context.bar_account_data_dict[event_trade.data.account].holding -= \
-                    self.context.current_trade_data.price * self.context.current_trade_data.volume
-
                 # 更新冻结的资产（减少）
-                self.context.bar_account_data_dict[event_trade.data.account].frozen -= \
-                    self.context.current_trade_data.price * self.context.current_trade_data.volume
+                self.context.bar_account_data_dict[event_trade.data.account].frozen = 0
 
                 # 更新账户总权益
                 self.context.bar_account_data_dict[event_trade.data.account].total_balance = \
                     self.context.bar_account_data_dict[event_trade.data.account].available + \
-                    self.context.bar_account_data_dict[event_trade.data.account].holding
-
-            elif self.context.current_trade_data.offset == Offset.OPEN and \
-                    self.context.current_trade_data.direction == Direction.SHORT:
-                # 做空开仓时
-                pass
-
-            elif self.context.current_trade_data.offset == Offset.OPEN and \
-                    self.context.current_trade_data.direction == Direction.SHORT:
-                # 做空平仓时
-                pass
+                    self.context.bar_account_data_dict[event_trade.data.account].frozen
 
         # 交易完成，相应的委托清除
         self.context.refresh_current_data()
@@ -1057,20 +996,27 @@ class StrategyBaseBacktestStock(object):
     def update_position_frozen(self, dt):
         """处理当日情况前，先更新当日股票的持仓冻结数量"""
         if self.bar_index > 0 and self.context.bar_position_data_dict:
+            last_timestamp = self.context.benchmark_index[self.bar_index - 1]
+            last_day = timestamp_to_datetime(last_timestamp, '%Y%m%d')
             for position_data in self.context.bar_position_data_dict.values():
-                cur_price = self.get_data.get_market_data(self.context.daily_data,
+                cur_close = self.get_data.get_market_data(self.context.daily_data,
                                                           all_symbol_code=[position_data.symbol],
-                                                          field=["open"],
+                                                          field=["close"],
                                                           start=dt,
                                                           end=dt)
-                if cur_price > 0:
-                    if position_data.frozen != 0:
+
+                if last_day != dt:
+                    if cur_close > 0:
                         position_data.frozen = 0
 
                         # 前日冻结的仓位可以交易了
-                        self.context.bar_account_data_dict[position_data.account].frozen -= position_data.position_value
-                else:   # 停牌（价格为 -1），持仓被冻结，不能交易，持仓占用的资金也被冻结
-                    position_data.frozen = position_data.volume
+                        self.context.bar_account_data_dict[position_data.account].frozen = 0
+                    else:   # 停牌（价格为 -1），持仓被冻结，不能交易，持仓占用的资金也被冻结
+                        position_data.frozen = position_data.volume
+
+                        self.context.bar_account_data_dict[position_data.account].frozen = position_data.position_value
+
+
         # print('—— * 更新今仓冻结数量 *')
 
     def delete_position_zero(self):
@@ -1080,52 +1026,38 @@ class StrategyBaseBacktestStock(object):
                 del self.context.bar_position_data_dict[symbol]
 
     def update_position_and_account_bar_data(self, dt: str):
-        """
-        1、基于close，更新每个持仓的持仓盈亏，更新账户总资产
-        2、已冻结持仓、资金的解冻，涉及到在不同 bar 上的情况，这里暂时不处理
-        """
-        dt_ = dt[:4] + '-' + dt[4:6] + '-' + dt[6:]
+        """基于close，更新每个持仓的持仓盈亏，更新账户总资产"""
+        dt = dt[:4] + '-' + dt[4:6] + '-' + dt[6:]
         if self.context.bar_position_data_dict:
             for account in self.context.bar_account_data_dict.values():
                 hold_balance = 0
-                frozen = 0
                 account.datetime = dt
                 account.pre_balance = account.total_balance
                 for position_data in self.context.bar_position_data_dict.values():
-                    if account.account_id != position_data.account:
-                        continue
+                    if account.account_id == position_data.account:
+                        cur_close = self.get_data.get_market_data(self.context.daily_data,
+                                                                  all_symbol_code=[position_data.symbol],
+                                                                  field=["close"],
+                                                                  start=dt,
+                                                                  end=dt)
 
-                    cur_close = self.get_data.get_market_data(self.context.daily_data,
-                                                              all_symbol_code=[position_data.symbol],
-                                                              field=["close"],
-                                                              start=dt_,
-                                                              end=dt_)
-
-                    position_data.datetime = dt
-                    position_data.position_value_pre = position_data.position_value
-
-                    if cur_close > 0:   # 今日股票未停牌
-                        position_data.position_value = position_data.volume * cur_close
-                        if dt != position_data.init_datetime:    # 现在不是开仓日的话，冻结的持仓、当前的冻结资产也不用计入
-                            position_data.frozen = 0
+                        position_data.datetime = dt
+                        position_data.position_value_pre = position_data.position_value
+                        if cur_close > 0:
+                            position_data.position_value = position_data.volume * cur_close
                         else:
-                            frozen += position_data.position_value
-                    else:
-                        frozen += position_data.position_value
-                        self.context.logger.info('-- {0} 在 {1} 的 close price = -1'.format(position_data.symbol,
-                                                                                          position_data.datetime))
-                    hold_balance += position_data.position_value
-                    position_data.position_pnl = position_data.position_value - \
-                                                 position_data.init_volume * position_data.init_price
-                account.holding = hold_balance
-                account.frozen = frozen
-                account.total_balance = account.available + account.holding
+                            self.context.logger.info('price = -1 {0}'.format(position_data.symbol))
+                        hold_balance += position_data.position_value_pre
+
+                        position_data.position_pnl = position_data.position_value - \
+                                                     position_data.init_volume * position_data.init_price
+                    account.total_balance = account.available + hold_balance
+                    account.frozen = hold_balance
         else:
             for account in self.context.bar_account_data_dict.values():
                 account.datetime = dt
                 account.pre_balance = account.total_balance
                 account.total_balance = account.available
-                account.holding = 0
                 account.frozen = 0
 
         # print("-- * 以当前bar的close更新账户总体情况")
@@ -1153,7 +1085,7 @@ class StrategyBaseBacktestStock(object):
         # 开仓时账户现金要够付持仓保证金，否则撤单
         # 股票视为100%保证金
         # 考虑到手续费、滑点等情况，现金应该多于开仓资金量的 110%
-        if offset.value == 'open':
+        if offset == 'open':
             contract_params = get_symbol_params(symbol)
             trade_balance = volume * price * contract_params['multiplier'] * contract_params['margin']
 
@@ -1161,11 +1093,11 @@ class StrategyBaseBacktestStock(object):
             #       即组合中每个标的物的订单都会冻结一部分资金，后边的股票判断可用现金时要将总现金减去冻结的现金后再判断
             #       类似真实交易终端下单时一样
             if trade_balance / 0.90 > self.context.current_account_data.available / len(self.universe):
-                print("现金不足")
+                print("Insufficient Available cash")
                 return False
 
         # 平仓时账户中应该有足够头寸，否则撤单
-        if offset.value == 'close':
+        if offset == 'close':
             # 是否有持仓
             if self.context.bar_position_data_dict:
                 # 指定资金账号中是否有指定合约的持仓
@@ -1173,14 +1105,15 @@ class StrategyBaseBacktestStock(object):
                         self.context.bar_position_data_dict[symbol].account == account:
                     if volume > (self.context.bar_position_data_dict[symbol].volume -
                                  self.context.bar_position_data_dict[symbol].frozen):
-                        print("持仓数量不足")
+                        print("Insufficient Available Position")
                         return False
                 else:
-                    print("资金账户 {0} 中没有 {1} 的仓位".format(account, symbol))
+                    print("No Available {0} Position in account {1}".format(symbol, account))
                     return False
             else:
-                print("无仓位")
+                print("No Position")
                 return False
+
         return True
 
     def position_rights(self, dt: str):

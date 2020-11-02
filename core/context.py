@@ -27,9 +27,9 @@ class Context(object):
 
         self.current_order_data = OrderData()
         self.current_trade_data = TradeData()
+        self.current_commission_data = 0
         self.current_position_data = PositionData()
         self.current_account_data = AccountData()
-        self.current_commission_data = 0
 
         self.active_stop_orders = {}            # 动态未成交止损单
         self.stop_orders = {}                   # 已成交止损单合集
